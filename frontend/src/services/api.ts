@@ -95,9 +95,50 @@ export const doctorApi = {
     api.post<{ success: boolean; data: Doctor }>('/doctors', data),
 };
 
+// --- AI Triage APIs (Groq Powered) ---
+export interface TriageResponse {
+  message: string;
+  is_ready_for_recommendation: boolean;
+  triage?: {
+    specialization_needed: string;
+    urgency: 'NORMAL' | 'PRIORITY' | 'EMERGENCY';
+    chief_complaint: string;
+    duration?: string;
+    severity?: string;
+    notes?: string;
+  };
+  recommended_doctors?: Array<{
+    doctor: Doctor;
+    match_score: number;
+    match_reason: string;
+  }>;
+  suggested_slots?: string[];
+  quick_replies?: string[];
+}
+
+export const aiApi = {
+  chatTriage: (
+    messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>,
+    preferredDate?: string,
+    preferredTime?: string
+  ) =>
+    api.post<{ success: boolean; data: TriageResponse }>('/ai/chat-triage', {
+      messages,
+      preferredDate,
+      preferredTime,
+    }),
+};
+
 // --- Appointment APIs ---
 export const appointmentApi = {
-  create: (data: { doctor_id: string; appointment_date: string; appointment_time: string; appointment_type?: string }) =>
+  create: (data: {
+    doctor_id: string;
+    appointment_date: string;
+    appointment_time: string;
+    appointment_type?: string;
+    ai_summary?: any;
+    priority?: 'NORMAL' | 'PRIORITY' | 'EMERGENCY';
+  }) =>
     api.post<{ success: boolean; data: Appointment; message: string }>('/appointments', data),
 
   getAll: () =>

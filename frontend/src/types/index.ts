@@ -66,6 +66,13 @@ export interface Appointment {
   department_name?: string;
   hospital_name?: string;
   token?: Token;
+  ai_summary?: {
+    chief_complaint: string;
+    duration?: string;
+    severity?: string;
+    urgency?: PriorityLevel;
+    notes?: string;
+  };
 }
 
 export interface Token {

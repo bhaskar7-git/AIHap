@@ -16,6 +16,7 @@ import tokenRoutes from './routes/tokenRoutes.js';
 import queueRoutes from './routes/queueRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
+import aiRoutes from './routes/aiRoutes.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -42,12 +43,13 @@ app.get('/api/health', (req: Request, res: Response) => {
   res.json({
     status: 'online',
     timestamp: new Date().toISOString(),
-    service: 'SmartQueue Hospital & Queue Management API'
+    service: 'SmartQueue Direct Doctor-Patient & AI Queue Management API'
   });
 });
 
 // Mount Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/ai', aiRoutes);
 app.use('/api/hospitals', hospitalRoutes);
 app.use('/api/departments', departmentRoutes);
 app.use('/api/doctors', doctorRoutes);

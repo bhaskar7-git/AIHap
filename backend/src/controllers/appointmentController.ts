@@ -5,11 +5,19 @@ import { queueService } from '../services/queueService.js';
 import { socketService } from '../services/socketService.js';
 import { notificationService } from '../services/notificationService.js';
 import { AuthRequest } from '../middleware/auth.js';
-import { Appointment, Token } from '../types/index.js';
+import { Appointment, Token, PriorityLevel } from '../types/index.js';
 
 export const createAppointment = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { doctor_id, appointment_date, appointment_time, appointment_type, patient_id } = req.body;
+    const {
+      doctor_id,
+      appointment_date,
+      appointment_time,
+      appointment_type,
+      patient_id,
+      ai_summary,
+      priority: requestedPriority
+    } = req.body;
 
     const patientId = (req.user?.role === 'PATIENT') ? req.user.id : (patient_id || req.user?.id);
 
@@ -27,8 +35,16 @@ export const createAppointment = async (req: AuthRequest, res: Response): Promis
     const apptId = uuidv4();
     const tokenId = uuidv4();
 
+    // Determine initial priority: AI priority (EMERGENCY/PRIORITY/NORMAL) or fallback
+    const priority = (ai_summary?.urgency || requestedPriority || 'NORMAL') as PriorityLevel;
+
     // Generate unique sequential token number
     const tokenNumber = await queueService.generateNextTokenNumber(doctor_id, appointment_date);
+
+    // Build appointment description including chief complaint if present
+    const apptTypeDesc = ai_summary?.chief_complaint
+      ? `${appointment_type || 'Consultation'} • AI Triage: ${ai_summary.chief_complaint}`
+      : (appointment_type || 'General Consultation');
 
     // Initial appointment
     const appointment: Appointment = {
@@ -37,19 +53,20 @@ export const createAppointment = async (req: AuthRequest, res: Response): Promis
       doctor_id,
       appointment_date,
       appointment_time,
-      appointment_type: appointment_type || 'General Consultation',
+      appointment_type: apptTypeDesc,
       status: 'WAITING',
       created_at: new Date().toISOString(),
+      ai_summary: ai_summary || undefined,
     };
 
     await store.createAppointment(appointment);
 
-    // Create token
+    // Create token with AI urgency priority
     const token: Token = {
       id: tokenId,
       appointment_id: apptId,
       token_number: tokenNumber,
-      priority: 'NORMAL',
+      priority: priority,
       status: 'WAITING',
       estimated_wait: 0,
       created_at: new Date().toISOString(),

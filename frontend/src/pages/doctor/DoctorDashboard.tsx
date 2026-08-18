@@ -32,9 +32,10 @@ export const DoctorDashboard: React.FC = () => {
   const [actionLoading, setActionLoading] = useState<boolean>(false);
   const [isAvailable, setIsAvailable] = useState<boolean>(true);
 
-  // Priority Modal State
+  // Priority & AI Brief Modal State
   const [selectedTokenForPriority, setSelectedTokenForPriority] = useState<Token | null>(null);
   const [isPriorityModalOpen, setIsPriorityModalOpen] = useState<boolean>(false);
+  const [isAiBriefModalOpen, setIsAiBriefModalOpen] = useState<boolean>(false);
 
   // Find doctor id
   const doctorId = user?.doctor?.id || user?.id || 'doc-01';
@@ -369,6 +370,19 @@ export const DoctorDashboard: React.FC = () => {
 
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          {/* AI Clinical Brief Inspection Button */}
+                          <button
+                            onClick={() => {
+                              setSelectedTokenForPriority(token);
+                              setIsAiBriefModalOpen(true);
+                            }}
+                            className="px-2.5 py-1.5 bg-brand-50 hover:bg-brand-100 text-brand-700 font-bold rounded-lg text-xs transition-colors flex items-center gap-1"
+                            title="View AI Clinical Intake Brief"
+                          >
+                            <Sparkles className="w-3.5 h-3.5 text-brand-600" />
+                            AI Brief
+                          </button>
+
                           {token.status === 'WAITING' && (
                             <>
                               <button
@@ -410,6 +424,60 @@ export const DoctorDashboard: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* AI Clinical Brief Modal */}
+      <Modal
+        isOpen={isAiBriefModalOpen}
+        onClose={() => setIsAiBriefModalOpen(false)}
+        title={`AI Pre-Consultation Intake • Token ${selectedTokenForPriority?.token_number || ''}`}
+      >
+        <div className="space-y-4">
+          <div className="p-4 bg-brand-50/80 border border-brand-200 rounded-2xl space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-brand-800 uppercase tracking-wider flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-brand-600" /> Groq AI Clinical Assessment
+              </span>
+              <span
+                className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full ${
+                  selectedTokenForPriority?.priority === 'EMERGENCY'
+                    ? 'bg-rose-600 text-white animate-pulse'
+                    : selectedTokenForPriority?.priority === 'PRIORITY'
+                    ? 'bg-amber-500 text-white'
+                    : 'bg-emerald-100 text-emerald-800'
+                }`}
+              >
+                {selectedTokenForPriority?.priority || 'NORMAL'} URGENCY
+              </span>
+            </div>
+
+            <div className="space-y-2 text-xs text-slate-700 pt-1">
+              <div>
+                <span className="text-slate-400 block font-semibold">Patient Name:</span>
+                <strong className="text-slate-900 text-sm">{selectedTokenForPriority?.patient_name || 'Patient'}</strong>
+              </div>
+              <div>
+                <span className="text-slate-400 block font-semibold">Phone:</span>
+                <span className="text-slate-700 font-mono">{selectedTokenForPriority?.patient_phone || 'Not provided'}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block font-semibold">Triage Summary:</span>
+                <p className="p-3 bg-white rounded-xl border border-brand-200 font-medium text-slate-800 leading-relaxed">
+                  Patient entered booking through Groq AI Medical Intake Assistant. Triage classified as {selectedTokenForPriority?.priority || 'NORMAL'} priority with estimated consultation duration of ~{queueState?.doctor.average_consultation_time || 10} minutes.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <button
+              onClick={() => setIsAiBriefModalOpen(false)}
+              className="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl text-xs shadow-md transition-all"
+            >
+              Close Brief
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Priority Change Modal (Section 10: Controlled Priority Queue) */}
       <Modal

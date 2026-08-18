@@ -42,19 +42,19 @@ export const LandingPage: React.FC = () => {
             {/* Left Hero Content */}
             <div className="lg:col-span-7 space-y-8 text-center lg:text-left">
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-50 border border-brand-200 text-brand-700 text-xs font-bold tracking-wide shadow-sm">
-                <span className="w-2 h-2 rounded-full bg-brand-500 animate-ping"></span>
-                SMART DIGITAL HEALTHCARE QUEUE ENGINE
+                <Sparkles className="w-4 h-4 text-brand-600 animate-pulse" />
+                GROQ AI CLINICAL TRIAGE & 1:1 DOCTOR QUEUE
               </div>
 
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight leading-[1.15]">
-                Don't wait for your token.{' '}
+                Direct 1:1 Doctor Care.{' '}
                 <span className="bg-gradient-to-r from-brand-600 via-cyan-600 to-teal-500 bg-clip-text text-transparent">
-                  Know when to arrive.
+                  Zero Waiting Lines.
                 </span>
               </h1>
 
               <p className="text-lg sm:text-xl text-slate-600 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
-                Smart digital appointments, real-time patient tokens and predictive queue management for modern hospitals.
+                Describe your symptoms to our intelligent Groq AI assistant to get matched with specialized doctors, receive live digital tokens, and know exactly when to arrive.
               </p>
 
               <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-2">
