@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import confetti from 'canvas-confetti';
 import {
@@ -16,7 +16,10 @@ import {
   ChevronRight,
   ShieldCheck,
   RotateCcw,
-  Check
+  Check,
+  Mic,
+  MicOff,
+  Globe,
 } from 'lucide-react';
 import { doctorApi, appointmentApi, aiApi, TriageResponse } from '../../services/api.js';
 import { Doctor, Appointment, PriorityLevel } from '../../types/index.js';
@@ -95,6 +98,66 @@ export const BookAppointmentPage: React.FC = () => {
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<any>(null);
+
+  // Mic / Voice state
+  const [isListening, setIsListening] = useState(false);
+  const [voiceLang, setVoiceLang] = useState('en-IN');
+  const [showLangPicker, setShowLangPicker] = useState(false);
+
+  const VOICE_LANGUAGES = [
+    { code: 'en-IN', label: '🇮🇳 English (India)' },
+    { code: 'hi-IN', label: '🇮🇳 हिंदी (Hindi)' },
+    { code: 'ta-IN', label: '🇮🇳 தமிழ் (Tamil)' },
+    { code: 'te-IN', label: '🇮🇳 తెలుగు (Telugu)' },
+    { code: 'bn-IN', label: '🇮🇳 বাংলা (Bengali)' },
+    { code: 'mr-IN', label: '🇮🇳 मराठी (Marathi)' },
+    { code: 'gu-IN', label: '🇮🇳 ગુજરાતી (Gujarati)' },
+    { code: 'kn-IN', label: '🇮🇳 ಕನ್ನಡ (Kannada)' },
+    { code: 'pa-IN', label: '🇮🇳 ਪੰਜਾਬੀ (Punjabi)' },
+    { code: 'en-US', label: '🇺🇸 English (US)' },
+  ];
+
+  const startListening = useCallback(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert('Voice input is not supported in this browser. Please use Chrome or Edge.');
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.lang = voiceLang;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+    recognition.continuous = false;
+
+    recognition.onstart = () => setIsListening(true);
+    recognition.onend = () => {
+      setIsListening(false);
+      recognitionRef.current = null;
+    };
+    recognition.onresult = (event: any) => {
+      const transcript = Array.from(event.results)
+        .map((r: any) => r[0].transcript)
+        .join('');
+      setInputText(transcript);
+      if (event.results[event.results.length - 1].isFinal) {
+        // Auto-send on final result
+        setTimeout(() => handleSendMessage(transcript), 300);
+      }
+    };
+    recognition.onerror = (e: any) => {
+      console.error('Speech error:', e.error);
+      setIsListening(false);
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+  }, [voiceLang]);
+
+  const stopListening = useCallback(() => {
+    recognitionRef.current?.stop();
+    setIsListening(false);
+  }, []);
 
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -587,55 +650,100 @@ export const BookAppointmentPage: React.FC = () => {
               )}
             </div>
           ))}
-
           {/* AI Thinking Indicator */}
           {isAiThinking && (
             <div className="flex gap-3 justify-start items-center animate-fade-in">
-              <div className="w-8 h-8 rounded-xl bg-brand-600 text-white flex items-center justify-center text-xs font-bold flex-shrink-0 animate-pulse">
-                AI
+              <div className="w-10 h-8 rounded-xl bg-gradient-to-br from-brand-600 to-cyan-600 text-white flex items-center justify-center text-[10px] font-extrabold flex-shrink-0 animate-pulse tracking-wide">
+                ARIA
               </div>
               <div className="p-3.5 bg-white border border-slate-200 rounded-2xl rounded-tl-sm text-xs text-slate-600 flex items-center gap-2 shadow-sm">
                 <span className="w-2 h-2 rounded-full bg-brand-600 animate-bounce"></span>
                 <span className="w-2 h-2 rounded-full bg-cyan-500 animate-bounce [animation-delay:0.2s]"></span>
                 <span className="w-2 h-2 rounded-full bg-teal-500 animate-bounce [animation-delay:0.4s]"></span>
-                <span className="font-semibold text-brand-900">Thinking...</span>
+                <span className="font-semibold text-brand-900">Aria is thinking...</span>
               </div>
             </div>
           )}
           <div ref={chatEndRef} />
         </div>
 
-        {/* ALWAYS-VISIBLE CLEAN BOTTOM INPUT BAR WITH INTEGRATED SEND BUTTON */}
+        {/* BOTTOM INPUT BAR — Send + Mic + Language */}
         <div className="p-3 sm:p-4 bg-white border-t border-slate-200 shadow-lg">
+          {/* Language picker dropdown */}
+          {showLangPicker && (
+            <div className="absolute bottom-20 right-4 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden min-w-[210px] animate-fade-in">
+              <p className="px-3 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100">Voice Language</p>
+              {VOICE_LANGUAGES.map((lang) => (
+                <button
+                  key={lang.code}
+                  onClick={() => { setVoiceLang(lang.code); setShowLangPicker(false); }}
+                  className={`w-full text-left px-3 py-2 text-xs font-medium hover:bg-brand-50 transition-colors ${
+                    voiceLang === lang.code ? 'text-brand-700 bg-brand-50 font-bold' : 'text-slate-700'
+                  }`}
+                >
+                  {lang.label}
+                </button>
+              ))}
+            </div>
+          )}
+
           <form
             onSubmit={(e) => {
               e.preventDefault();
               handleSendMessage();
             }}
-            className="flex items-center gap-2 max-w-4xl mx-auto"
+            className="flex items-center gap-2 max-w-4xl mx-auto relative"
           >
+            {/* Language selector button */}
+            <button
+              type="button"
+              onClick={() => setShowLangPicker(p => !p)}
+              className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl transition-colors flex-shrink-0"
+              title="Change voice language"
+            >
+              <Globe className="w-4 h-4" />
+            </button>
+
             <div className="relative flex-1 flex items-center">
               <input
                 ref={inputRef}
                 type="text"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                placeholder="Reply to the assistant..."
-                className="w-full pl-4 pr-12 py-3.5 bg-slate-50 border border-slate-300 rounded-2xl text-xs sm:text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-all shadow-inner"
+                placeholder={isListening ? '🎤 Listening...' : 'Reply to Aria...'}
+                className={`w-full pl-4 pr-12 py-3.5 border rounded-2xl text-xs sm:text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all shadow-inner ${
+                  isListening
+                    ? 'bg-rose-50 border-rose-300 focus:ring-rose-400 placeholder:text-rose-400'
+                    : 'bg-slate-50 border-slate-300 focus:bg-white'
+                }`}
               />
 
-              {/* Inside Icon / Quick Action */}
+              {/* Mic button inside input */}
               <button
-                type="submit"
-                disabled={!inputText.trim() || isAiThinking}
-                className="absolute right-2 p-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl shadow-md transition-all flex items-center justify-center disabled:opacity-30 disabled:hover:bg-brand-600"
-                title="Send Message"
+                type="button"
+                onClick={isListening ? stopListening : startListening}
+                className={`absolute right-2 p-2 rounded-xl shadow-sm transition-all flex items-center justify-center ${
+                  isListening
+                    ? 'bg-rose-500 hover:bg-rose-600 text-white animate-pulse'
+                    : 'bg-slate-200 hover:bg-slate-300 text-slate-600'
+                }`}
+                title={isListening ? 'Stop listening' : `Speak in ${VOICE_LANGUAGES.find(l => l.code === voiceLang)?.label}`}
               >
-                <Send className="w-4 h-4" />
+                {isListening ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
               </button>
             </div>
 
-            {/* Clear / Reset Conversation Button */}
+            {/* Send Button */}
+            <button
+              type="submit"
+              disabled={!inputText.trim() || isAiThinking}
+              className="p-3 bg-brand-600 hover:bg-brand-700 text-white rounded-2xl shadow-md transition-all flex items-center justify-center disabled:opacity-30 disabled:hover:bg-brand-600 flex-shrink-0"
+              title="Send Message"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+
+            {/* Reset Button */}
             <button
               type="button"
               onClick={() => {
@@ -643,18 +751,30 @@ export const BookAppointmentPage: React.FC = () => {
                   {
                     id: `reset-${Date.now()}`,
                     role: 'assistant',
-                    content: 'Conversation reset. What symptoms would you like to evaluate?',
+                    content: "👋 Hi again! I'm Aria. What's been bothering you today?",
                     quickReplies: INITIAL_QUICK_CHIPS,
                     timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                   },
                 ]);
               }}
-              className="p-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl text-xs font-semibold transition-colors flex items-center gap-1"
+              className="p-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl text-xs font-semibold transition-colors flex-shrink-0"
               title="Reset Chat"
             >
               <RotateCcw className="w-4 h-4" />
             </button>
           </form>
+
+          {/* Language indicator */}
+          {isListening && (
+            <p className="text-center text-[10px] text-rose-500 font-semibold mt-1.5 animate-pulse">
+              🎤 Listening in {VOICE_LANGUAGES.find(l => l.code === voiceLang)?.label} — speak now
+            </p>
+          )}
+          {!isListening && (
+            <p className="text-center text-[10px] text-slate-400 mt-1">
+              🌐 Voice: {VOICE_LANGUAGES.find(l => l.code === voiceLang)?.label} · tap <Globe className="inline w-2.5 h-2.5" /> to change
+            </p>
+          )}
         </div>
       </div>
     </div>

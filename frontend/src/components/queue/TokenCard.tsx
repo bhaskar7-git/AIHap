@@ -64,12 +64,9 @@ export const TokenCard: React.FC<TokenCardProps> = ({
     bannerSubtitle = "Thank you for visiting SmartQueue healthcare.";
   }
 
-  const qrData = JSON.stringify({
-    tokenId: token.id,
-    tokenNumber: token.token_number,
-    doctor: token.doctor_name,
-    patient: token.patient_name,
-  });
+  // Generate a real, scannable URL — points to live queue for this appointment
+  const baseUrl = window.location.origin;
+  const qrData = `${baseUrl}/patient/queue?doctor=${token.doctor_id || ''}&token=${token.id}&t=${token.token_number}`;
 
   return (
     <div className="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden transition-all hover:shadow-2xl">

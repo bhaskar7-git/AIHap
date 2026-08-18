@@ -58,7 +58,7 @@ export const Navbar: React.FC = () => {
                     Dashboard
                   </Link>
                   <Link
-                    to="/patient/book-appointment"
+                    to="/patient/book-token"
                     className="px-3 py-2 text-sm font-medium text-slate-700 hover:text-brand-600 hover:bg-slate-50 rounded-lg transition-colors flex items-center gap-1.5"
                   >
                     <Sparkles className="w-4 h-4 text-brand-500" />
@@ -252,7 +252,7 @@ export const Navbar: React.FC = () => {
                     Dashboard
                   </Link>
                   <Link
-                    to="/patient/book-appointment"
+                    to="/patient/book-token"
                     onClick={() => setMobileMenuOpen(false)}
                     className="block px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-lg"
                   >

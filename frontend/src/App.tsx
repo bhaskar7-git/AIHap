@@ -24,6 +24,7 @@ import { NotFoundPage } from './pages/NotFoundPage.js';
 import { PatientDashboard } from './pages/patient/PatientDashboard.js';
 import { HospitalsPage } from './pages/patient/HospitalsPage.js';
 import { DoctorsPage } from './pages/patient/DoctorsPage.js';
+import { BookTokenPage } from './pages/patient/BookTokenPage.js';
 import { BookAppointmentPage } from './pages/patient/BookAppointmentPage.js';
 import { LiveQueuePage } from './pages/patient/LiveQueuePage.js';
 import { AppointmentsPage } from './pages/patient/AppointmentsPage.js';
@@ -80,6 +81,7 @@ export const App: React.FC = () => {
                 {/* Patient Role Protected Routes */}
                 <Route element={<RoleProtectedRoute allowedRoles={['PATIENT']} />}>
                   <Route path="/patient/dashboard" element={<PatientDashboard />} />
+                  <Route path="/patient/book-token" element={<BookTokenPage />} />
                   <Route path="/patient/book-appointment" element={<BookAppointmentPage />} />
                   <Route path="/patient/appointments" element={<AppointmentsPage />} />
                   <Route path="/patient/profile" element={<ProfilePage />} />
