@@ -86,6 +86,9 @@ export interface Token {
   created_at: string;
   called_at?: string | null;
   completed_at?: string | null;
+  arrived_at?: string | null;       // patient checked in "I'm Here"
+  predicted_duration?: number;       // AI-predicted consultation duration in minutes
+  checkin_deadline?: string | null;  // auto-expire deadline (appointment_time + 15 min)
   // Joined metadata
   patient_name?: string;
   patient_phone?: string;
@@ -119,6 +122,7 @@ export interface QueueState {
   doctor: Doctor;
   currentToken: Token | null;
   waitingCount: number;
+  arrivedCount: number;       // patients who checked in "I'm Here"
   completedCount: number;
   noShowCount: number;
   totalToday: number;

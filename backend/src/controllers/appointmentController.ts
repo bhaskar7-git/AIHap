@@ -46,6 +46,43 @@ export const createAppointment = async (req: AuthRequest, res: Response): Promis
       ? `${appointment_type || 'Consultation'} • AI Triage: ${ai_summary.chief_complaint}`
       : (appointment_type || 'General Consultation');
 
+    // Calculate check-in deadline: appointment_time + 15 minute grace window
+    const checkinDeadline = (() => {
+      try {
+        const [datePart] = appointment_date.split('T');
+        // Parse time like "10:00 AM" or "14:30"
+        let hours = 0, minutes = 0;
+        const timeStr = appointment_time.replace(/\s/g, ' ').trim();
+        const amPmMatch = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+        if (amPmMatch) {
+          hours = parseInt(amPmMatch[1]);
+          minutes = parseInt(amPmMatch[2]);
+          const amPm = amPmMatch[3].toUpperCase();
+          if (amPm === 'PM' && hours !== 12) hours += 12;
+          if (amPm === 'AM' && hours === 12) hours = 0;
+        } else {
+          const parts = timeStr.split(':');
+          hours = parseInt(parts[0]);
+          minutes = parseInt(parts[1] || '0');
+        }
+        const deadlineDate = new Date(`${datePart}T${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:00`);
+        deadlineDate.setMinutes(deadlineDate.getMinutes() + 15); // 15-min grace window
+        return deadlineDate.toISOString();
+      } catch {
+        return null;
+      }
+    })();
+
+    // AI-predicted consultation duration based on triage severity
+    const predictedDuration = (() => {
+      const severity = ai_summary?.severity?.toLowerCase() || '';
+      const urgency = ai_summary?.urgency || priority;
+      if (urgency === 'EMERGENCY') return 25;
+      if (urgency === 'PRIORITY' || severity === 'severe') return 18;
+      if (severity === 'moderate') return 12;
+      return doctor?.average_consultation_time || 10; // mild or unknown
+    })();
+
     // Initial appointment
     const appointment: Appointment = {
       id: apptId,
@@ -61,7 +98,7 @@ export const createAppointment = async (req: AuthRequest, res: Response): Promis
 
     await store.createAppointment(appointment);
 
-    // Create token with AI urgency priority
+    // Create token with AI urgency priority + deadline + predicted duration
     const token: Token = {
       id: tokenId,
       appointment_id: apptId,
@@ -69,6 +106,8 @@ export const createAppointment = async (req: AuthRequest, res: Response): Promis
       priority: priority,
       status: 'WAITING',
       estimated_wait: 0,
+      predicted_duration: predictedDuration,
+      checkin_deadline: checkinDeadline,
       created_at: new Date().toISOString(),
     };
 

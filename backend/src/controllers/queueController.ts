@@ -95,3 +95,24 @@ export const setTokenPriority = async (req: AuthRequest, res: Response): Promise
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+/** Patient checks in "I'm Here" for their token */
+export const patientArrival = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { tokenId } = req.params;
+    if (!tokenId) {
+      res.status(400).json({ success: false, message: 'Token ID is required' });
+      return;
+    }
+    const result = await queueService.patientArrival(tokenId as string);
+    res.status(200).json({
+      success: true,
+      message: "You're checked in! We'll call you shortly.",
+      data: result,
+    });
+  } catch (error: any) {
+    // 400 for business logic errors (expired, wrong status), 500 for others
+    const status = error.message.includes('expired') || error.message.includes('only check in') ? 400 : 500;
+    res.status(status).json({ success: false, message: error.message });
+  }
+};

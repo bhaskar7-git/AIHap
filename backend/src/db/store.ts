@@ -352,9 +352,12 @@ class SupabaseStore {
       priority: token.priority,
       status: token.status,
       estimated_wait: token.estimated_wait,
+      predicted_duration: token.predicted_duration || 10,
+      checkin_deadline: token.checkin_deadline || null,
       created_at: token.created_at,
       called_at: token.called_at || null,
       completed_at: token.completed_at || null,
+      arrived_at: token.arrived_at || null,
     });
     if (error) throw error;
     return this.getTokenById(token.id) as Promise<Token>;
@@ -409,6 +412,17 @@ class SupabaseStore {
       .eq('id', id);
     if (error) throw error;
     return this.getTokenById(id);
+  }
+
+  /** Patient marks themselves as arrived ("I'm Here") */
+  public async markArrived(tokenId: string): Promise<Token | null> {
+    const { error } = await supabase
+      .from('tokens')
+      .update({ arrived_at: new Date().toISOString() })
+      .eq('id', tokenId)
+      .in('status', ['WAITING']); // can only arrive if still WAITING
+    if (error) throw error;
+    return this.getTokenById(tokenId);
   }
 
   public enrichToken(token: Token): Token {

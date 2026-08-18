@@ -119,13 +119,13 @@ export const BookAppointmentPage: React.FC = () => {
     };
     fetchDoctors();
 
-    // Initial greeting message
+    // Initial greeting message from Aria
     setMessages([
       {
         id: 'init-1',
         role: 'assistant',
         content:
-          "👋 Hello! I am your **AI Clinical Intake Assistant**.\n\nDescribe what symptoms, health problems, or pain you are experiencing today, or select one of the common conditions below to begin:",
+          "👋 Hi there! I'm **Aria**, your personal health assistant here at SmartQueue.\n\nI'll chat with you for a bit to understand what's going on, and then connect you with the right doctor. So — what's been bothering you lately?",
         quickReplies: INITIAL_QUICK_CHIPS,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       },
@@ -150,10 +150,13 @@ export const BookAppointmentPage: React.FC = () => {
     setIsAiThinking(true);
 
     try {
-      const apiPayload = newHistory.map((m) => ({
-        role: m.role,
-        content: m.content,
-      }));
+      // Build conversation payload — exclude the init greeting (id: 'init-1') since it's a UI-only message
+      const apiPayload = newHistory
+        .filter((m) => m.id !== 'init-1')
+        .map((m) => ({
+          role: m.role,
+          content: m.content,
+        }));
 
       const res = await aiApi.chatTriage(apiPayload, preferredDate, preferredTime);
 
@@ -176,13 +179,7 @@ export const BookAppointmentPage: React.FC = () => {
       const fallbackMsg: MessageItem = {
         id: `ai-err-${Date.now()}`,
         role: 'assistant',
-        content:
-          "I have reviewed your symptoms. Here are the top registered specialists available to assist you:",
-        recommendedDoctors: doctors.slice(0, 3).map((d) => ({
-          doctor: d,
-          match_score: 95,
-          match_reason: `Specialized in ${d.specialization}`,
-        })),
+        content: "Sorry, I had a little hiccup there! 😅 Could you say that again? I'm listening.",
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
       setMessages((prev) => [...prev, fallbackMsg]);
@@ -395,8 +392,8 @@ export const BookAppointmentPage: React.FC = () => {
               className={`flex gap-3 ${bubble.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}
             >
               {bubble.role === 'assistant' && (
-                <div className="w-8 h-8 rounded-xl bg-brand-600 text-white flex items-center justify-center text-xs font-bold flex-shrink-0 shadow-sm mt-1">
-                  AI
+                <div className="w-10 h-8 rounded-xl bg-gradient-to-br from-brand-600 to-cyan-600 text-white flex items-center justify-center text-[10px] font-extrabold flex-shrink-0 shadow-sm mt-1 tracking-wide">
+                  ARIA
                 </div>
               )}
 

@@ -5,7 +5,8 @@ import {
   startConsultation,
   completeConsultation,
   markNoShow,
-  setTokenPriority
+  setTokenPriority,
+  patientArrival,
 } from '../controllers/queueController.js';
 import { authenticateToken, authorizeRoles } from '../middleware/auth.js';
 
@@ -13,6 +14,9 @@ const router = Router();
 
 // Public / Patient can check queue state
 router.get('/:doctorId', getDoctorQueue);
+
+// Patient check-in "I'm Here" (15 min window from appointment time)
+router.post('/arrive/:tokenId', authenticateToken, authorizeRoles('PATIENT', 'ADMIN'), patientArrival);
 
 // Protected actions for Doctor & Admin
 router.post('/:doctorId/call-next', authenticateToken, authorizeRoles('DOCTOR', 'ADMIN'), callNextPatient);

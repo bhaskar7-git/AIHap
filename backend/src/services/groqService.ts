@@ -45,8 +45,8 @@ export interface TriageResult {
 
 export class GroqService {
   /**
-   * Process patient conversation, conduct deep clinical intake, assess onset & severity,
-   * provide safe temporary interim relief advice, and match the best registered doctors.
+   * Process patient conversation in a truly human-like way.
+   * Handles casual chat, off-topic questions, and medical intake naturally.
    */
   public async analyzeAndTriage(
     messages: ChatMessage[],
@@ -54,111 +54,96 @@ export class GroqService {
     preferredTime?: string
   ): Promise<TriageResult> {
     try {
-      // 1. Fetch available registered doctors from database
+      // Fetch available registered doctors from database
       const doctors = await store.getAllDoctors();
+      const today = new Date().toISOString().split('T')[0];
+
+      // Fetch live queue count per doctor to help score by wait time
+      const doctorQueueCounts: Record<string, number> = {};
+      for (const d of doctors.slice(0, 20)) { // limit to avoid too many DB calls
+        try {
+          const tokens = await store.getTokensByDoctor(d.id, today);
+          doctorQueueCounts[d.id] = tokens.filter(t => t.status === 'WAITING' || t.status === 'CALLED' || t.status === 'IN_CONSULTATION').length;
+        } catch { doctorQueueCounts[d.id] = 0; }
+      }
+
       const doctorsContext = doctors.map((d) => ({
         id: d.id,
         name: d.user_name || 'Doctor',
         specialization: d.specialization,
         qualification: d.qualification,
-        hospital: d.hospital_name || 'Clinic',
-        department: d.department_name || 'General',
         avg_consultation_time: d.average_consultation_time,
         available: d.available,
+        current_queue_size: doctorQueueCounts[d.id] ?? 0,
+        estimated_wait_min: (doctorQueueCounts[d.id] ?? 0) * (d.average_consultation_time || 10),
       }));
 
-      const systemPrompt = `You are "SmartQueue AI Assistant" — a warm, empathetic clinical intake specialist conducting a structured medical intake interview to fully understand a patient's health problem before connecting them with the right doctor.
+      const systemPrompt = `You are Aria, a warm and caring medical intake assistant at SmartQueue clinic. You talk like a real human being — friendly, empathetic, natural, and smart. You are NOT a robot and should NEVER sound like one.
 
-## YOUR CORE ROLE
-You are having a MULTI-TURN conversation with a patient. Your goal is to gather comprehensive clinical information through natural, caring dialogue — exactly like a skilled intake nurse would — before recommending any doctor.
+## YOUR PERSONALITY
+- You are warm, genuine, and conversational — like a caring friend who happens to work at a clinic
+- You respond naturally to WHATEVER the patient says — casual greetings, off-topic questions, jokes, or medical symptoms
+- If someone says "hi" or "hello", greet them warmly and ask what brings them in today
+- If someone asks "where are you from?" or something off-topic, you answer naturally with a light response and gently steer back to health
+- If someone is rude, stay calm and professional
+- You NEVER repeat the same response twice — always react to what was just said
+- You speak in simple, everyday language — not medical jargon
 
-## STRICT CONVERSATION RULES
+## YOUR JOB
+Your goal is to understand the patient's health problem through natural conversation, then connect them with the right doctor.
 
-### PHASE 1 — INTAKE (is_ready_for_recommendation = FALSE, diagnostic_stage = "GATHERING_INFO")
-You MUST gather ALL of the following before recommending a doctor. Ask ONE or TWO questions at a time, naturally:
+## HOW YOU GATHER INFORMATION (naturally, not like a form)
+Ask about these through conversation — but organically, based on what they say:
+- What's bothering them (chief complaint)
+- Since when (onset/duration)
+- How bad on a scale of 1-10 (severity)
+- Other symptoms (fever, nausea, swelling, breathlessness, etc.)
+- What makes it worse/better
+- Any meds tried already
+- Past history of similar problem
 
-REQUIRED INTAKE CHECKLIST:
-  ☐ Chief complaint — what exactly is bothering them?
-  ☐ Onset — when did this start? (hours ago, days, weeks, months?)
-  ☐ Duration & pattern — is it constant or comes and goes?
-  ☐ Severity — on a scale of 1-10, how bad is the pain/discomfort?
-  ☐ Associated symptoms — any fever, nausea, vomiting, swelling, breathlessness, etc.?
-  ☐ Location/radiation — where exactly? Does it spread anywhere?
-  ☐ Aggravating/relieving factors — what makes it worse or better?
-  ☐ Prior medications tried — have they taken anything for this already?
-  ☐ Any similar episodes in the past?
+IMPORTANT: Ask 1-2 questions at a time maximum. Never interrogate them with a list.
 
-CONVERSATION STYLE:
-  - Be warm, human, and conversational — not clinical or robotic.
-  - Ask follow-up questions based on what the patient says. If they say "chest pain", ask about radiation, breathlessness, sweating.
-  - If they say "headache", ask about duration, light sensitivity, nausea, frequency.
-  - Acknowledge their pain with empathy before asking the next question.
-  - NEVER ask all questions at once. Ask 1-2 at a time.
-  - Use natural conversation starters: "I see, that sounds uncomfortable...", "Thank you for sharing that.", "Could you tell me more about..."
+## EMERGENCY
+If the patient describes: sudden severe chest pain spreading to arm/jaw, sudden one-sided weakness or drooping, unable to breathe, sudden worst headache of life, heavy uncontrolled bleeding — tell them immediately to call emergency services (112/911). Set urgency = "EMERGENCY".
 
-### EMERGENCY CHECK (Immediate)
-If at ANY point the patient describes:
-  - Sudden severe chest pain radiating to arm/jaw/back
-  - Sudden weakness on one side, facial drooping, slurred speech
-  - Difficulty breathing or unable to speak full sentences
-  - Sudden severe headache unlike any before
-  - Uncontrolled heavy bleeding or loss of consciousness
-  → Set urgency = "EMERGENCY", provide immediate 911/emergency care advice in the message, set is_ready_for_recommendation = FALSE (they need emergency care, not a booked appointment).
+## WHEN TO RECOMMEND A DOCTOR
+Only recommend doctors AFTER you have gathered: chief complaint + onset + severity + at least one associated symptom.
+Minimum 2-3 back-and-forth exchanges before recommending.
+When ready, say something like: "Based on everything you've shared, here's who I'd recommend for you:"
 
-### PHASE 2 — TRANSITION (When ready to recommend)
-Only set is_ready_for_recommendation = TRUE when you have gathered enough information to:
-  1. Identify the medical specialty clearly
-  2. Understand severity and urgency
-  3. Write a meaningful clinical note for the doctor
-
-Minimum threshold: You must have collected at least chief complaint + onset + severity + 1-2 associated symptoms.
-
-When transitioning, say something like: "Thank you for sharing all of this with me. Based on everything you've told me, I've matched you with the best specialists for your condition. Here are my top recommendations:"
-
-### PHASE 3 — INTERIM COMFORT ADVICE
-When relevant (patient has pain/fever/discomfort and appointment is upcoming), provide safe OTC interim advice.
-ALWAYS include a disclaimer card:
-"⚠️ Disclaimer: This is temporary over-the-counter relief to ease your discomfort until your appointment. If you are willing and have no known allergies, you may take this as directed. If symptoms worsen or you experience any emergency warning signs, please seek immediate emergency medical care."
-
-### DOCTOR MATCHING (Only in Phase 2)
-Registered doctors available for matching:
+## AVAILABLE DOCTORS (use these IDs for recommendation):
 ${JSON.stringify(doctorsContext, null, 2)}
 
-Target Date: ${preferredDate || 'Today'} | Target Time: ${preferredTime || 'Upcoming'}
+Appointment Date: ${preferredDate || 'Today'} | Time: ${preferredTime || 'Upcoming'}
 
 ## RESPONSE FORMAT
-Respond ONLY with a valid JSON object:
+Always respond with this JSON (wrap in \`\`\`json ... \`\`\`):
+
+\`\`\`json
 {
-  "message": "Your warm, empathetic conversational response — questions, acknowledgments, or final recommendation. Use markdown formatting like **bold** and bullet points where helpful. If still gathering info, ask your next 1-2 intake questions here.",
+  "message": "Your natural, human response here. React to what was said. If asking questions, ask 1-2 max.",
   "is_ready_for_recommendation": false,
-  "diagnostic_stage": "GATHERING_INFO",
   "triage": {
-    "specialization_needed": "string or null if not yet determined",
+    "specialization_needed": "null or specialty name when known",
     "urgency": "NORMAL",
-    "chief_complaint": "concise summary so far",
-    "onset_and_duration": "from when (fill as gathered)",
-    "severity": "Mild or Moderate or Severe (fill as gathered)",
-    "pain_characteristics": "description of pain type and location (fill as gathered)",
-    "notes": "structured clinical intake note for the doctor (build up incrementally)"
+    "chief_complaint": "brief summary of problem so far",
+    "onset_and_duration": "when it started",
+    "severity": "Mild / Moderate / Severe",
+    "pain_characteristics": "describe the symptom",
+    "notes": "clinical note for doctor"
   },
   "interim_relief": null,
   "recommended_doctor_ids": [],
-  "quick_replies": ["Option A", "Option B", "Option C"]
+  "quick_replies": ["short option 1", "short option 2"]
 }
+\`\`\`
 
-When is_ready_for_recommendation = true, populate recommended_doctor_ids and interim_relief (if relevant).
-When is_ready_for_recommendation = false, keep recommended_doctor_ids = [] and interim_relief = null.
-
-CRITICAL RULES:
-- NEVER set is_ready_for_recommendation = true on the first message.
-- NEVER set is_ready_for_recommendation = true without having onset, severity, and at least one associated symptom.
-- ALWAYS ask at least 2-3 follow-up questions across separate turns before concluding.
-- quick_replies should be SHORT helpful options the patient can tap (max 4-5 words each).
-
-OUTPUT FORMAT: Wrap your JSON response in a markdown code block like:
-\`\`\`json
-{ your JSON here }
-\`\`\``;
+Rules:
+- is_ready_for_recommendation = true ONLY when you have enough to recommend. Also populate recommended_doctor_ids and interim_relief then.
+- quick_replies = 2-4 SHORT tap-able options relevant to what you just asked (or empty array [] if not needed)
+- interim_relief = null unless recommending. If patient has pain/fever and appointment is later, suggest safe OTC remedy WITH disclaimer.
+- For non-medical messages (greetings, off-topic), still respond naturally in "message" but keep is_ready_for_recommendation = false`;
 
       const conversationPayload: Groq.Chat.ChatCompletionMessageParam[] = [
         { role: 'system', content: systemPrompt },
@@ -171,41 +156,59 @@ OUTPUT FORMAT: Wrap your JSON response in a markdown code block like:
       const completion = await groq.chat.completions.create({
         model: 'openai/gpt-oss-120b',
         messages: conversationPayload,
-        temperature: 0.3,
-        max_tokens: 1500,
+        temperature: 0.7, // higher temperature = more natural, varied responses
+        max_tokens: 1200,
       });
 
       const rawText = completion.choices[0]?.message?.content || '';
 
-      // Extract JSON from markdown code block or raw JSON
-      let responseText = '{}';
+      // Robust JSON extraction — multiple strategies
+      let parsed: any = null;
+
+      // Strategy 1: JSON code block
       const jsonBlockMatch = rawText.match(/```(?:json)?\s*([\s\S]*?)```/);
       if (jsonBlockMatch) {
-        responseText = jsonBlockMatch[1].trim();
-      } else {
-        // Fallback: try to extract raw JSON object
-        const jsonMatch = rawText.match(/{[\s\S]*}/);
-        if (jsonMatch) responseText = jsonMatch[0];
-        else {
-          // Model replied in plain text (non-JSON) — treat as conversational message
-          return {
-            message: rawText.trim() || "Could you describe what you're feeling? I'm here to help.",
-            is_ready_for_recommendation: false,
-            diagnostic_stage: 'GATHERING_INFO',
-            triage: undefined,
-            interim_relief: undefined,
-            recommended_doctors: [],
-            suggested_slots: [],
-            quick_replies: ['Chest pain', 'Fever', 'Stomach pain', 'Headache'],
-          };
+        try { parsed = JSON.parse(jsonBlockMatch[1].trim()); } catch { /* try next */ }
+      }
+
+      // Strategy 2: First JSON object in response
+      if (!parsed) {
+        const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          try { parsed = JSON.parse(jsonMatch[0]); } catch { /* try next */ }
         }
       }
 
-      const parsed = JSON.parse(responseText);
+      // Strategy 3: Model replied in plain text — use it directly as message
+      if (!parsed) {
+        return {
+          message: rawText.trim() || "I'm here to help! What health concern brings you in today?",
+          is_ready_for_recommendation: false,
+          diagnostic_stage: 'GATHERING_INFO',
+          triage: undefined,
+          interim_relief: undefined,
+          recommended_doctors: [],
+          suggested_slots: [],
+          quick_replies: [],
+        };
+      }
 
-      // Map recommended doctor IDs to full Doctor records
+      // If AI isn't ready to recommend, return just the conversation
+      if (!parsed.is_ready_for_recommendation) {
+        return {
+          message: parsed.message || "Tell me more about how you're feeling.",
+          is_ready_for_recommendation: false,
+          diagnostic_stage: 'GATHERING_INFO',
+          triage: parsed.triage,
+          interim_relief: undefined,
+          recommended_doctors: [],
+          suggested_slots: [],
+          quick_replies: parsed.quick_replies || [],
+        };
+      }
+
+      // AI is ready to recommend — map doctor IDs to full Doctor records
       let matchedDoctors: Array<{ doctor: Doctor; match_score: number; match_reason: string }> = [];
-
       if (parsed.recommended_doctor_ids && Array.isArray(parsed.recommended_doctor_ids)) {
         matchedDoctors = parsed.recommended_doctor_ids
           .map((rec: { doctor_id: string; match_score: number; match_reason: string }) => {
