@@ -8,7 +8,7 @@ export const getDoctorQueue = async (req: Request, res: Response): Promise<void>
     const { doctorId } = req.params;
     const { date } = req.query;
 
-    const queueState = await queueService.getQueueState(doctorId, date as string | undefined);
+    const queueState = await queueService.getQueueState(doctorId as string, date as string | undefined);
     res.status(200).json({ success: true, data: queueState });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
@@ -18,7 +18,7 @@ export const getDoctorQueue = async (req: Request, res: Response): Promise<void>
 export const callNextPatient = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { doctorId } = req.params;
-    const result = await queueService.callNext(doctorId);
+    const result = await queueService.callNext(doctorId as string);
     res.status(200).json({
       success: true,
       message: result.calledToken ? `Called token ${result.calledToken.token_number}` : 'No waiting patients in queue.',
@@ -32,12 +32,12 @@ export const callNextPatient = async (req: AuthRequest, res: Response): Promise<
 export const startConsultation = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { doctorId, tokenId } = req.params;
-    const targetTokenId = tokenId || req.body.tokenId;
+    const targetTokenId = (tokenId || req.body.tokenId) as string;
     if (!targetTokenId) {
       res.status(400).json({ success: false, message: 'Token ID is required' });
       return;
     }
-    const updatedQueue = await queueService.startConsultation(doctorId, targetTokenId);
+    const updatedQueue = await queueService.startConsultation(doctorId as string, targetTokenId);
     res.status(200).json({ success: true, message: 'Consultation started', data: updatedQueue });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
@@ -47,12 +47,12 @@ export const startConsultation = async (req: AuthRequest, res: Response): Promis
 export const completeConsultation = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { doctorId, tokenId } = req.params;
-    const targetTokenId = tokenId || req.body.tokenId;
+    const targetTokenId = (tokenId || req.body.tokenId) as string;
     if (!targetTokenId) {
       res.status(400).json({ success: false, message: 'Token ID is required' });
       return;
     }
-    const updatedQueue = await queueService.completeConsultation(doctorId, targetTokenId);
+    const updatedQueue = await queueService.completeConsultation(doctorId as string, targetTokenId);
     res.status(200).json({ success: true, message: 'Consultation completed', data: updatedQueue });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
@@ -62,12 +62,12 @@ export const completeConsultation = async (req: AuthRequest, res: Response): Pro
 export const markNoShow = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { doctorId, tokenId } = req.params;
-    const targetTokenId = tokenId || req.body.tokenId;
+    const targetTokenId = (tokenId || req.body.tokenId) as string;
     if (!targetTokenId) {
       res.status(400).json({ success: false, message: 'Token ID is required' });
       return;
     }
-    const updatedQueue = await queueService.markNoShow(doctorId, targetTokenId);
+    const updatedQueue = await queueService.markNoShow(doctorId as string, targetTokenId);
     res.status(200).json({ success: true, message: 'Marked as No Show', data: updatedQueue });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
@@ -77,7 +77,7 @@ export const markNoShow = async (req: AuthRequest, res: Response): Promise<void>
 export const setTokenPriority = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { tokenId } = req.params;
-    const targetTokenId = tokenId || req.body.tokenId;
+    const targetTokenId = (tokenId || req.body.tokenId) as string;
     const priority: PriorityLevel = req.body.priority || 'PRIORITY';
 
     if (!targetTokenId) {
@@ -85,11 +85,11 @@ export const setTokenPriority = async (req: AuthRequest, res: Response): Promise
       return;
     }
 
-    const result = await queueService.setPriority(targetTokenId, priority);
+    const updated = await queueService.setPriority(targetTokenId, priority);
     res.status(200).json({
       success: true,
-      message: `Token priority set to ${priority}. Queue reordered.`,
-      data: result,
+      message: `Priority set to ${priority}`,
+      data: updated,
     });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });

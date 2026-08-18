@@ -19,7 +19,7 @@ export const getNotifications = async (req: AuthRequest, res: Response): Promise
 export const markNotificationRead = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const notif = await store.markNotificationRead(id);
+    const notif = await store.markNotificationRead(id as string);
     res.status(200).json({ success: true, data: notif });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });

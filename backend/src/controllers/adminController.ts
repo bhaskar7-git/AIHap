@@ -1,11 +1,11 @@
 import { Request, Response } from 'express';
 import { store } from '../db/store.js';
 import { queueService } from '../services/queueService.js';
+import { supabase } from '../lib/supabase.js';
 
 export const getAdminDashboard = async (req: Request, res: Response): Promise<void> => {
   try {
     const today = new Date().toISOString().split('T')[0];
-    const raw = store.getRawData();
 
     const users = await store.getAllUsers();
     const patients = users.filter(u => u.role === 'PATIENT');
@@ -14,9 +14,12 @@ export const getAdminDashboard = async (req: Request, res: Response): Promise<vo
     const hospitals = await store.getAllHospitals();
     const appointments = await store.getAllAppointments();
 
+    const { data: tokensData } = await supabase.from('tokens').select('*');
+    const allTokens = tokensData || [];
+
     const todayAppts = appointments.filter(a => a.appointment_date === today);
-    const waitingTokens = raw.tokens.filter(t => t.status === 'WAITING');
-    const completedTokens = raw.tokens.filter(t => t.status === 'COMPLETED');
+    const waitingTokens = allTokens.filter((t: any) => t.status === 'WAITING');
+    const completedTokens = allTokens.filter((t: any) => t.status === 'COMPLETED');
     const activeDoctors = doctors.filter(d => d.available);
 
     // Compute department stats
@@ -91,16 +94,18 @@ export const getAdminDashboard = async (req: Request, res: Response): Promise<vo
 
 export const getAdminStatistics = async (req: Request, res: Response): Promise<void> => {
   try {
-    const appointments = await store.getAllAppointments();
-    const raw = store.getRawData();
+    const { data: tokensData } = await supabase.from('tokens').select('*');
+    const allTokens = tokensData || [];
+
+    const { count: eventsCount } = await supabase.from('queue_events').select('*', { count: 'exact', head: true });
 
     // Group appointments by status
     const statusCounts = {
-      WAITING: raw.tokens.filter(t => t.status === 'WAITING').length,
-      IN_CONSULTATION: raw.tokens.filter(t => t.status === 'IN_CONSULTATION' || t.status === 'CALLED').length,
-      COMPLETED: raw.tokens.filter(t => t.status === 'COMPLETED').length,
-      NO_SHOW: raw.tokens.filter(t => t.status === 'NO_SHOW').length,
-      CANCELLED: raw.tokens.filter(t => t.status === 'CANCELLED').length,
+      WAITING: allTokens.filter((t: any) => t.status === 'WAITING').length,
+      IN_CONSULTATION: allTokens.filter((t: any) => t.status === 'IN_CONSULTATION' || t.status === 'CALLED').length,
+      COMPLETED: allTokens.filter((t: any) => t.status === 'COMPLETED').length,
+      NO_SHOW: allTokens.filter((t: any) => t.status === 'NO_SHOW').length,
+      CANCELLED: allTokens.filter((t: any) => t.status === 'CANCELLED').length,
     };
 
     // Hourly traffic distribution
@@ -121,7 +126,7 @@ export const getAdminStatistics = async (req: Request, res: Response): Promise<v
       data: {
         statusCounts,
         hourlyDistribution,
-        totalEvents: raw.queue_events.length,
+        totalEvents: eventsCount || 0,
       },
     });
   } catch (error: any) {

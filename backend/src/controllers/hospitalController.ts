@@ -14,7 +14,7 @@ export const getHospitals = async (req: Request, res: Response): Promise<void> =
 
 export const getHospitalById = async (req: Request, res: Response): Promise<void> => {
   try {
-    const hospital = await store.getHospitalById(req.params.id);
+    const hospital = await store.getHospitalById(req.params.id as string);
     if (!hospital) {
       res.status(404).json({ success: false, message: 'Hospital not found' });
       return;

@@ -7,7 +7,7 @@ async function runFullTestSuite() {
 
   try {
     // Helper for JSON fetch
-    const req = async (endpoint: string, options: RequestInit = {}) => {
+    const req = async (endpoint: string, options: RequestInit = {}): Promise<any> => {
       const res = await fetch(`${API}${endpoint}`, {
         ...options,
         headers: {
@@ -15,7 +15,7 @@ async function runFullTestSuite() {
           ...(options.headers || {}),
         },
       });
-      const json = await res.json();
+      const json: any = await res.json();
       if (!res.ok) {
         throw new Error(json.message || `HTTP ${res.status}`);
       }

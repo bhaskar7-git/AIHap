@@ -60,7 +60,7 @@ export const getDoctors = async (req: Request, res: Response): Promise<void> => 
 
 export const getDoctorById = async (req: Request, res: Response): Promise<void> => {
   try {
-    const doctor = await store.getDoctorById(req.params.id);
+    const doctor = await store.getDoctorById(req.params.id as string);
     if (!doctor) {
       res.status(404).json({ success: false, message: 'Doctor not found.' });
       return;
@@ -76,7 +76,7 @@ export const updateDoctor = async (req: Request, res: Response): Promise<void> =
     const { id } = req.params;
     const { available, average_consultation_time, specialization, qualification } = req.body;
     
-    const updated = await store.updateDoctor(id, {
+    const updated = await store.updateDoctor(id as string, {
       ...(typeof available === 'boolean' ? { available } : {}),
       ...(average_consultation_time ? { average_consultation_time: parseInt(average_consultation_time, 10) } : {}),
       ...(specialization ? { specialization } : {}),

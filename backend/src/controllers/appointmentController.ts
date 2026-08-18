@@ -130,7 +130,7 @@ export const getAppointments = async (req: AuthRequest, res: Response): Promise<
 
 export const getAppointmentById = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const appt = await store.getAppointmentById(req.params.id);
+    const appt = await store.getAppointmentById(req.params.id as string);
     if (!appt) {
       res.status(404).json({ success: false, message: 'Appointment not found' });
       return;
@@ -143,7 +143,7 @@ export const getAppointmentById = async (req: AuthRequest, res: Response): Promi
 
 export const cancelAppointment = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const appt = await store.getAppointmentById(req.params.id);
+    const appt = await store.getAppointmentById(req.params.id as string);
     if (!appt) {
       res.status(404).json({ success: false, message: 'Appointment not found' });
       return;
@@ -178,7 +178,7 @@ export const cancelAppointment = async (req: AuthRequest, res: Response): Promis
 
 export const getTokenById = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const token = await store.getTokenById(req.params.id);
+    const token = await store.getTokenById(req.params.id as string);
     if (!token) {
       res.status(404).json({ success: false, message: 'Token not found' });
       return;
