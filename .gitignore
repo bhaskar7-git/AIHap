@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+**/node_modules/
+dist/
+build/
+.dist/
+
+# Environment variables — NEVER commit these
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Local data store
+data/
+backend/data/
+*.json.bak
+
+# TypeScript build output
+*.js.map
+*.tsbuildinfo
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS & Editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
