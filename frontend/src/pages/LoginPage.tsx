@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Activity, Lock, Mail, ArrowRight, ShieldCheck, Stethoscope, User, AlertCircle } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Activity, Lock, Mail, ArrowRight, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.js';
 import { UserRole } from '../types/index.js';
 
 export const LoginPage: React.FC = () => {
-  const { login, demoLogin } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -34,21 +33,7 @@ export const LoginPage: React.FC = () => {
       const loggedInUser = await login(email, password);
       redirectByRole(loggedInUser.role);
     } catch (err: any) {
-      // Supabase errors come as plain Error objects; Axios errors have .response.data
       setError(err?.message || err?.response?.data?.message || 'Login failed. Please check your credentials.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleQuickDemoLogin = async (role: UserRole) => {
-    try {
-      setLoading(true);
-      setError(null);
-      const loggedInUser = await demoLogin(role);
-      redirectByRole(loggedInUser.role);
-    } catch (err: any) {
-      setError(err?.message || err?.response?.data?.message || 'Demo login failed. Ensure schema is applied in Supabase.');
     } finally {
       setLoading(false);
     }
@@ -64,49 +49,6 @@ export const LoginPage: React.FC = () => {
           </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900">Sign in to SmartQueue</h2>
           <p className="text-xs sm:text-sm text-slate-500">Access your appointments, live token queue or medical dashboard</p>
-        </div>
-
-        {/* 1-Click Demo Login Panel (Crucial for Hackathon evaluation!) */}
-        <div className="p-4 bg-brand-50/80 border border-brand-200 rounded-2xl space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-brand-800 uppercase tracking-wider flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-brand-600 animate-ping"></span>
-              1-Click Demo Logins
-            </span>
-            <span className="text-[10px] text-brand-600 font-medium">Pre-seeded</span>
-          </div>
-
-          <div className="grid grid-cols-3 gap-2">
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() => handleQuickDemoLogin('PATIENT')}
-              className="px-2 py-2.5 bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 rounded-xl text-xs font-semibold shadow-sm hover:border-brand-300 transition-all flex flex-col items-center gap-1 disabled:opacity-50"
-            >
-              <User className="w-4 h-4 text-cyan-600" />
-              <span>Patient</span>
-            </button>
-
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() => handleQuickDemoLogin('DOCTOR')}
-              className="px-2 py-2.5 bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 rounded-xl text-xs font-semibold shadow-sm hover:border-brand-300 transition-all flex flex-col items-center gap-1 disabled:opacity-50"
-            >
-              <Stethoscope className="w-4 h-4 text-brand-600" />
-              <span>Doctor</span>
-            </button>
-
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() => handleQuickDemoLogin('ADMIN')}
-              className="px-2 py-2.5 bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 rounded-xl text-xs font-semibold shadow-sm hover:border-brand-300 transition-all flex flex-col items-center gap-1 disabled:opacity-50"
-            >
-              <ShieldCheck className="w-4 h-4 text-emerald-600" />
-              <span>Admin</span>
-            </button>
-          </div>
         </div>
 
         {/* Standard Login Form */}
@@ -129,7 +71,7 @@ export const LoginPage: React.FC = () => {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="patient@smartqueue.com"
+                  placeholder="name@example.com"
                   className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-colors"
                   required
                 />
@@ -156,7 +98,7 @@ export const LoginPage: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+              className="w-full py-3.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50"
             >
               {loading ? 'Authenticating...' : 'Sign In'}
               <ArrowRight className="w-4 h-4" />
@@ -166,7 +108,7 @@ export const LoginPage: React.FC = () => {
           <div className="pt-2 text-center text-xs text-slate-500">
             Don't have an account?{' '}
             <Link to="/register" className="font-bold text-brand-600 hover:text-brand-700">
-              Register as Patient
+              Register here
             </Link>
           </div>
         </div>
