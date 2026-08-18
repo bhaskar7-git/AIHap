@@ -44,6 +44,36 @@ const INITIAL_QUICK_CHIPS = [
   '👁️ Red painful eye irritation',
 ];
 
+// Renders AI message content with basic markdown support (bold, bullets)
+const renderMessageContent = (text: string) => {
+  const lines = text.split('\n');
+  return lines.map((line, i) => {
+    // Bullet point lines
+    if (line.trim().startsWith('- ') || line.trim().startsWith('• ')) {
+      const content = line.trim().replace(/^[-•]\s*/, '');
+      return (
+        <li key={i} className="ml-3 list-disc">
+          {renderInline(content)}
+        </li>
+      );
+    }
+    // Empty line as spacer
+    if (line.trim() === '') return <div key={i} className="h-1" />;
+    return <p key={i}>{renderInline(line)}</p>;
+  });
+};
+
+const renderInline = (text: string) => {
+  // Handle **bold** text
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={i}>{part.slice(2, -2)}</strong>;
+    }
+    return <span key={i}>{part}</span>;
+  });
+};
+
 export const BookAppointmentPage: React.FC = () => {
   const navigate = useNavigate();
 
@@ -379,7 +409,12 @@ export const BookAppointmentPage: React.FC = () => {
                       : 'bg-white border border-slate-200 text-slate-800 rounded-tl-sm'
                   }`}
                 >
-                  <div className="whitespace-pre-line">{bubble.content}</div>
+                  <div className="space-y-0.5">
+                    {bubble.role === 'assistant'
+                      ? renderMessageContent(bubble.content)
+                      : <p>{bubble.content}</p>
+                    }
+                  </div>
                   <span
                     className={`text-[10px] block mt-1.5 ${
                       bubble.role === 'user' ? 'text-white/70 text-right' : 'text-slate-400 text-left'
@@ -389,12 +424,12 @@ export const BookAppointmentPage: React.FC = () => {
                   </span>
                 </div>
 
-                {/* AI Clinical Assessment Pill */}
-                {bubble.triage && (
+                {/* AI Clinical Assessment Pill — only shown once intake is complete */}
+                {bubble.triage && bubble.recommendedDoctors && bubble.recommendedDoctors.length > 0 && (
                   <div className="p-4 bg-brand-50/90 border border-brand-200 rounded-2xl text-xs space-y-2 animate-fade-in">
                     <div className="flex items-center justify-between">
                       <span className="font-bold text-brand-900 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
-                        <Activity className="w-4 h-4 text-brand-600" /> Clinical Assessment
+                        <Activity className="w-4 h-4 text-brand-600" /> Clinical Assessment Summary
                       </span>
                       <span
                         className={`px-2.5 py-0.5 rounded-full text-[10px] font-black ${
@@ -411,13 +446,19 @@ export const BookAppointmentPage: React.FC = () => {
 
                     <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-600 pt-1 border-t border-brand-100">
                       <div>
-                        <span className="text-slate-400 block">Recommended Specialty:</span>
+                        <span className="text-slate-400 block">Matched Specialty:</span>
                         <strong className="text-slate-900">{bubble.triage.specialization_needed}</strong>
                       </div>
                       <div>
                         <span className="text-slate-400 block">Symptom Severity:</span>
                         <strong className="text-slate-900">{bubble.triage.severity || 'Moderate'}</strong>
                       </div>
+                      {bubble.triage.onset_and_duration && (
+                        <div className="col-span-2">
+                          <span className="text-slate-400 block">Onset / Duration:</span>
+                          <strong className="text-slate-900">{bubble.triage.onset_and_duration}</strong>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -560,7 +601,7 @@ export const BookAppointmentPage: React.FC = () => {
                 <span className="w-2 h-2 rounded-full bg-brand-600 animate-bounce"></span>
                 <span className="w-2 h-2 rounded-full bg-cyan-500 animate-bounce [animation-delay:0.2s]"></span>
                 <span className="w-2 h-2 rounded-full bg-teal-500 animate-bounce [animation-delay:0.4s]"></span>
-                <span className="font-semibold text-brand-900">Evaluating symptoms, onset & finding specialists...</span>
+                <span className="font-semibold text-brand-900">Thinking...</span>
               </div>
             </div>
           )}
@@ -582,7 +623,7 @@ export const BookAppointmentPage: React.FC = () => {
                 type="text"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                placeholder="Type your symptoms (e.g. from when, pain level, fever, etc.)..."
+                placeholder="Reply to the assistant..."
                 className="w-full pl-4 pr-12 py-3.5 bg-slate-50 border border-slate-300 rounded-2xl text-xs sm:text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-all shadow-inner"
               />
 
