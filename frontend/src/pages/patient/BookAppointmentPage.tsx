@@ -78,7 +78,7 @@ export const BookAppointmentPage: React.FC = () => {
     fetchDoctors();
   }, []);
 
-  // Action: Submit Symptoms & Additional Info to Groq AI
+  // Action: Submit Symptoms & Additional Info to AI Assistant
   const handleRunAiTriage = async () => {
     if (!symptomText.trim()) return;
 
@@ -385,7 +385,7 @@ export const BookAppointmentPage: React.FC = () => {
           </div>
 
           <div className="space-y-2">
-            <h3 className="text-xl font-black text-slate-900">Groq AI is analyzing your symptoms...</h3>
+            <h3 className="text-xl font-black text-slate-900">AI Assistant is analyzing your symptoms...</h3>
             <p className="text-xs text-slate-500 leading-relaxed">
               Evaluating medical urgency, determining exact specialization required, and matching available registered specialists in real-time.
             </p>

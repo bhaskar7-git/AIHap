@@ -435,7 +435,7 @@ export const DoctorDashboard: React.FC = () => {
           <div className="p-4 bg-brand-50/80 border border-brand-200 rounded-2xl space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-brand-800 uppercase tracking-wider flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4 text-brand-600" /> Groq AI Clinical Assessment
+                <Sparkles className="w-4 h-4 text-brand-600" /> AI Clinical Assessment
               </span>
               <span
                 className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full ${
@@ -462,7 +462,7 @@ export const DoctorDashboard: React.FC = () => {
               <div>
                 <span className="text-slate-400 block font-semibold">Triage Summary:</span>
                 <p className="p-3 bg-white rounded-xl border border-brand-200 font-medium text-slate-800 leading-relaxed">
-                  Patient entered booking through Groq AI Medical Intake Assistant. Triage classified as {selectedTokenForPriority?.priority || 'NORMAL'} priority with estimated consultation duration of ~{queueState?.doctor.average_consultation_time || 10} minutes.
+                  Patient entered booking through AI Medical Intake Assistant. Triage classified as {selectedTokenForPriority?.priority || 'NORMAL'} priority with estimated consultation duration of ~{queueState?.doctor.average_consultation_time || 10} minutes.
                 </p>
               </div>
             </div>

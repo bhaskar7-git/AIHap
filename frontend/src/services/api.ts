@@ -95,7 +95,7 @@ export const doctorApi = {
     api.post<{ success: boolean; data: Doctor }>('/doctors', data),
 };
 
-// --- AI Triage APIs (Groq Powered) ---
+// --- AI Clinical Triage APIs ---
 export interface TriageResponse {
   message: string;
   is_ready_for_recommendation: boolean;
