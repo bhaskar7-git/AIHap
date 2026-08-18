@@ -153,7 +153,12 @@ CRITICAL RULES:
 - NEVER set is_ready_for_recommendation = true on the first message.
 - NEVER set is_ready_for_recommendation = true without having onset, severity, and at least one associated symptom.
 - ALWAYS ask at least 2-3 follow-up questions across separate turns before concluding.
-- quick_replies should be SHORT helpful options the patient can tap (max 4-5 words each).`;
+- quick_replies should be SHORT helpful options the patient can tap (max 4-5 words each).
+
+OUTPUT FORMAT: Wrap your JSON response in a markdown code block like:
+\`\`\`json
+{ your JSON here }
+\`\`\``;
 
       const conversationPayload: Groq.Chat.ChatCompletionMessageParam[] = [
         { role: 'system', content: systemPrompt },
@@ -166,12 +171,36 @@ CRITICAL RULES:
       const completion = await groq.chat.completions.create({
         model: 'openai/gpt-oss-120b',
         messages: conversationPayload,
-        response_format: { type: 'json_object' },
-        temperature: 0.2,
-        max_tokens: 1200,
+        temperature: 0.3,
+        max_tokens: 1500,
       });
 
-      const responseText = completion.choices[0]?.message?.content || '{}';
+      const rawText = completion.choices[0]?.message?.content || '';
+
+      // Extract JSON from markdown code block or raw JSON
+      let responseText = '{}';
+      const jsonBlockMatch = rawText.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (jsonBlockMatch) {
+        responseText = jsonBlockMatch[1].trim();
+      } else {
+        // Fallback: try to extract raw JSON object
+        const jsonMatch = rawText.match(/{[\s\S]*}/);
+        if (jsonMatch) responseText = jsonMatch[0];
+        else {
+          // Model replied in plain text (non-JSON) — treat as conversational message
+          return {
+            message: rawText.trim() || "Could you describe what you're feeling? I'm here to help.",
+            is_ready_for_recommendation: false,
+            diagnostic_stage: 'GATHERING_INFO',
+            triage: undefined,
+            interim_relief: undefined,
+            recommended_doctors: [],
+            suggested_slots: [],
+            quick_replies: ['Chest pain', 'Fever', 'Stomach pain', 'Headache'],
+          };
+        }
+      }
+
       const parsed = JSON.parse(responseText);
 
       // Map recommended doctor IDs to full Doctor records
@@ -191,7 +220,21 @@ CRITICAL RULES:
           .filter((item: any): item is { doctor: Doctor; match_score: number; match_reason: string } => item !== null);
       }
 
-      // If AI didn't recommend any specific IDs or no match was found, match by specialty keyword
+      // Only do fallback doctor matching when AI explicitly says ready
+      if (!parsed.is_ready_for_recommendation) {
+        return {
+          message: parsed.message || "Could you tell me more about what you're experiencing?",
+          is_ready_for_recommendation: false,
+          diagnostic_stage: 'GATHERING_INFO',
+          triage: parsed.triage,
+          interim_relief: undefined,
+          recommended_doctors: [],
+          suggested_slots: [],
+          quick_replies: parsed.quick_replies || ['Tell me more', 'Chest pain', 'Fever', 'Headache'],
+        };
+      }
+
+      // Fallback doctor matching by specialty keyword (only runs when is_ready_for_recommendation = true)
       if (matchedDoctors.length === 0 && parsed.triage?.specialization_needed) {
         const spec = parsed.triage.specialization_needed.toLowerCase();
         const fallback = doctors.filter(
@@ -234,33 +277,17 @@ CRITICAL RULES:
         quick_replies: parsed.quick_replies || ['Confirm Top Specialist', 'Change Time Slot', 'Ask Another Question'],
       };
     } catch (error: any) {
-      console.error('AI Triage error:', error);
-      const doctors = await store.getAllDoctors();
+      console.error('AI Triage error:', error?.message || error);
+      // Return a friendly conversational reply — never dump doctors on error
       return {
-        message: "I have reviewed your symptoms and selected the top available specialists to examine your condition:",
-        is_ready_for_recommendation: true,
-        diagnostic_stage: 'COMPLETE',
-        triage: {
-          specialization_needed: 'General Medicine',
-          urgency: 'NORMAL',
-          chief_complaint: messages[messages.length - 1]?.content || 'General Health Consultation',
-          onset_and_duration: 'Recent onset',
-          severity: 'Moderate',
-        },
-        interim_relief: {
-          recommended_remedy: 'Stay comfortably hydrated and rest until your consultation time.',
-          purpose: 'General comfort management',
-          dosage_instruction: 'Sip warm water or fluids periodically.',
-          disclaimer: 'Disclaimer: This temporary relief is suggested to ease your discomfort until you see the doctor. If you are willing and have no prior allergies, you may follow these steps. Seek immediate emergency care if symptoms escalate.',
-          safety_precautions: 'Avoid heavy exertion until examined by the doctor.',
-        },
-        recommended_doctors: doctors.slice(0, 3).map((d) => ({
-          doctor: d,
-          match_score: 95,
-          match_reason: `Experienced in ${d.specialization}`,
-        })),
-        suggested_slots: ['09:30 AM', '11:00 AM', '03:00 PM', '05:30 PM'],
-        quick_replies: ['Book Consultation', 'View Doctor Profile'],
+        message: "I'm here to help you find the right doctor. 😊\n\nCould you please tell me — **what symptoms or health concerns** are you experiencing today? For example, are you feeling pain, fever, or discomfort somewhere?",
+        is_ready_for_recommendation: false,
+        diagnostic_stage: 'GATHERING_INFO',
+        triage: undefined,
+        interim_relief: undefined,
+        recommended_doctors: [],
+        suggested_slots: [],
+        quick_replies: ['I have chest pain', 'I have a fever', 'Stomach ache', 'Headache / migraine'],
       };
     }
   }
