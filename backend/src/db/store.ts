@@ -345,23 +345,48 @@ class SupabaseStore {
 
   // --- TOKENS ---
   public async createToken(token: Token): Promise<Token> {
-    const { error } = await supabase.from('tokens').insert({
+    // Base columns that always exist
+    const baseInsert = {
       id: token.id,
       appointment_id: token.appointment_id,
       token_number: token.token_number,
       priority: token.priority,
       status: token.status,
       estimated_wait: token.estimated_wait,
-      predicted_duration: token.predicted_duration || 10,
-      checkin_deadline: token.checkin_deadline || null,
       created_at: token.created_at,
       called_at: token.called_at || null,
       completed_at: token.completed_at || null,
+    };
+
+    // Try inserting with new columns (requires migration to have been run)
+    const { error } = await supabase.from('tokens').insert({
+      ...baseInsert,
+      predicted_duration: token.predicted_duration || 10,
+      checkin_deadline: token.checkin_deadline || null,
       arrived_at: token.arrived_at || null,
     });
-    if (error) throw error;
+
+    if (error) {
+      // If error is about missing columns (migration not run yet), fall back to base insert
+      const isSchemaMissing =
+        error.message?.includes('arrived_at') ||
+        error.message?.includes('predicted_duration') ||
+        error.message?.includes('checkin_deadline') ||
+        error.message?.includes('schema cache') ||
+        error.code === 'PGRST204';
+
+      if (isSchemaMissing) {
+        console.warn('[store] New token columns not found in DB schema — running base insert. Please run the migration SQL.');
+        const { error: fallbackError } = await supabase.from('tokens').insert(baseInsert);
+        if (fallbackError) throw fallbackError;
+      } else {
+        throw error;
+      }
+    }
+
     return this.getTokenById(token.id) as Promise<Token>;
   }
+
 
   public async getTokenById(id: string): Promise<Token | null> {
     const { data, error } = await supabase
@@ -420,8 +445,15 @@ class SupabaseStore {
       .from('tokens')
       .update({ arrived_at: new Date().toISOString() })
       .eq('id', tokenId)
-      .in('status', ['WAITING']); // can only arrive if still WAITING
-    if (error) throw error;
+      .in('status', ['WAITING']);
+    if (error) {
+      const isSchemaMissing = error.message?.includes('arrived_at') || error.message?.includes('schema cache');
+      if (isSchemaMissing) {
+        console.warn('[store] arrived_at column missing — migration not run yet. Skipping arrived_at update.');
+        return this.getTokenById(tokenId);
+      }
+      throw error;
+    }
     return this.getTokenById(tokenId);
   }
 
