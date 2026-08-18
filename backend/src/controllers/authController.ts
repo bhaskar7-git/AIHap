@@ -80,16 +80,21 @@ export const syncProfile = async (req: AuthRequest, res: Response): Promise<void
       specialization,
       qualification,
       hospital_id,
+      hospital_name,
       department_id,
+      department_name,
       average_consultation_time = 10,
     } = req.body;
+
+    // Clean phone number (keep digits only, max 10 digits)
+    const cleanedPhone = phone ? String(phone).replace(/\D/g, '').slice(-10) : '';
 
     const { data: profile, error } = await supabase
       .from('profiles')
       .upsert({
         id: authUser.id,
         name: name?.trim() || authUser.user_metadata?.name || 'User',
-        phone: phone?.trim() || '',
+        phone: cleanedPhone,
         role: role,
         created_at: new Date().toISOString(),
       })
@@ -101,27 +106,76 @@ export const syncProfile = async (req: AuthRequest, res: Response): Promise<void
       return;
     }
 
-    // If role is DOCTOR, also create doctor record
+    // If role is DOCTOR, create or link doctor record with hospital and department
     if (role === 'DOCTOR') {
-      let hospId = hospital_id;
-      let deptId = department_id;
+      let finalHospId = hospital_id;
+      let finalDeptId = department_id;
 
-      // If not provided, fallback to first available hospital and department
-      if (!hospId) {
+      // 1. Resolve Hospital
+      if (!finalHospId && hospital_name) {
+        // Try to find existing hospital by name
+        const { data: existingHosp } = await supabase
+          .from('hospitals')
+          .select('id')
+          .ilike('name', hospital_name.trim())
+          .maybeSingle();
+
+        if (existingHosp) {
+          finalHospId = existingHosp.id;
+        } else {
+          // Create new hospital
+          finalHospId = `hosp-${uuidv4().substring(0, 8)}`;
+          await supabase.from('hospitals').insert({
+            id: finalHospId,
+            name: hospital_name.trim(),
+            address: 'Main Healthcare Campus',
+            city: 'Metro City',
+            phone: cleanedPhone || '+91 80 4455 6677',
+            created_at: new Date().toISOString(),
+          });
+        }
+      } else if (!finalHospId) {
         const { data: hosp } = await supabase.from('hospitals').select('id').limit(1).maybeSingle();
-        hospId = hosp?.id || 'hosp-01';
+        finalHospId = hosp?.id || 'hosp-01';
       }
-      if (!deptId) {
-        const { data: dept } = await supabase.from('departments').select('id').eq('hospital_id', hospId).limit(1).maybeSingle();
-        deptId = dept?.id || 'dept-01';
+
+      // 2. Resolve Department
+      if (!finalDeptId && department_name) {
+        const { data: existingDept } = await supabase
+          .from('departments')
+          .select('id')
+          .eq('hospital_id', finalHospId)
+          .ilike('name', department_name.trim())
+          .maybeSingle();
+
+        if (existingDept) {
+          finalDeptId = existingDept.id;
+        } else {
+          finalDeptId = `dept-${uuidv4().substring(0, 8)}`;
+          await supabase.from('departments').insert({
+            id: finalDeptId,
+            hospital_id: finalHospId,
+            name: department_name.trim(),
+            description: `${department_name.trim()} Department`,
+            created_at: new Date().toISOString(),
+          });
+        }
+      } else if (!finalDeptId) {
+        const { data: dept } = await supabase
+          .from('departments')
+          .select('id')
+          .eq('hospital_id', finalHospId)
+          .limit(1)
+          .maybeSingle();
+        finalDeptId = dept?.id || 'dept-01';
       }
 
       await supabase.from('doctors').upsert({
         id: `doc-${uuidv4().substring(0, 8)}`,
         user_id: authUser.id,
-        hospital_id: hospId,
-        department_id: deptId,
-        specialization: specialization || 'General Practitioner',
+        hospital_id: finalHospId,
+        department_id: finalDeptId,
+        specialization: specialization || 'General Physician',
         qualification: qualification || 'MBBS',
         average_consultation_time: Number(average_consultation_time) || 10,
         available: true,

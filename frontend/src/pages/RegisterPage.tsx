@@ -13,18 +13,43 @@ import {
   ShieldCheck,
   Building2,
   Clock,
-  Award
+  Award,
+  Edit3,
+  ListFilter
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.js';
 import { hospitalApi, departmentApi } from '../services/api.js';
 import { Hospital, Department, UserRole } from '../types/index.js';
+
+// Pre-defined popular hospitals & departments for immediate selection
+const DEFAULT_HOSPITALS = [
+  { id: 'hosp-01', name: 'City Care Hospital', city: 'Metro City' },
+  { id: 'hosp-02', name: 'Apollo Super Specialty Hospital', city: 'Bangalore' },
+  { id: 'hosp-03', name: 'Government General Hospital', city: 'New Delhi' },
+  { id: 'hosp-04', name: 'Fortis Memorial Research Institute', city: 'Gurugram' },
+  { id: 'hosp-05', name: 'Max Super Speciality Hospital', city: 'Delhi NCR' },
+  { id: 'hosp-06', name: 'AIIMS (All India Institute of Medical Sciences)', city: 'New Delhi' },
+];
+
+const DEFAULT_DEPARTMENTS = [
+  { id: 'dept-01', name: 'General Medicine' },
+  { id: 'dept-02', name: 'Cardiology' },
+  { id: 'dept-03', name: 'Orthopedics' },
+  { id: 'dept-04', name: 'Dermatology' },
+  { id: 'dept-05', name: 'Pediatrics' },
+  { id: 'dept-06', name: 'Neurology' },
+  { id: 'dept-07', name: 'ENT (Ear, Nose & Throat)' },
+  { id: 'dept-08', name: 'Gynecology & Obstetrics' },
+  { id: 'dept-09', name: 'Ophthalmology' },
+  { id: 'dept-10', name: 'Gastroenterology' },
+];
 
 export const RegisterPage: React.FC = () => {
   const { register } = useAuth();
   const navigate = useNavigate();
 
   // Role Selection
-  const [role, setRole] = useState<UserRole>('PATIENT');
+  const [role, setRole] = useState<UserRole>('DOCTOR');
 
   // Common Fields
   const [name, setName] = useState('');
@@ -35,52 +60,78 @@ export const RegisterPage: React.FC = () => {
   // Doctor Specific Fields
   const [specialization, setSpecialization] = useState('');
   const [qualification, setQualification] = useState('');
-  const [hospitalId, setHospitalId] = useState('');
-  const [departmentId, setDepartmentId] = useState('');
+  
+  // Hospital & Department selection or custom input
+  const [isCustomHospital, setIsCustomHospital] = useState(false);
+  const [selectedHospitalName, setSelectedHospitalName] = useState(DEFAULT_HOSPITALS[0].name);
+  const [customHospitalName, setCustomHospitalName] = useState('');
+
+  const [isCustomDepartment, setIsCustomDepartment] = useState(false);
+  const [selectedDepartmentName, setSelectedDepartmentName] = useState(DEFAULT_DEPARTMENTS[0].name);
+  const [customDepartmentName, setCustomDepartmentName] = useState('');
+
   const [avgConsultationTime, setAvgConsultationTime] = useState(10);
 
   // Admin Specific Field
   const [adminPasscode, setAdminPasscode] = useState('');
 
-  // Data
-  const [hospitals, setHospitals] = useState<Hospital[]>([]);
-  const [departments, setDepartments] = useState<Department[]>([]);
+  // Available lists from API merged with defaults
+  const [hospitalList, setHospitalList] = useState<{ id: string; name: string }[]>(DEFAULT_HOSPITALS);
+  const [departmentList, setDepartmentList] = useState<{ id: string; name: string }[]>(DEFAULT_DEPARTMENTS);
 
   // State
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Load hospitals for doctor registration
+    // Attempt to load hospitals from backend if available
     hospitalApi.getAll().then((res) => {
       if (res.data.success && res.data.data.length > 0) {
-        setHospitals(res.data.data);
-        setHospitalId(res.data.data[0].id);
+        setHospitalList(res.data.data);
+        setSelectedHospitalName(res.data.data[0].name);
       }
-    }).catch(() => {});
+    }).catch(() => {
+      // Defaults already active
+    });
   }, []);
 
-  useEffect(() => {
-    if (hospitalId) {
-      departmentApi.getAll(hospitalId).then((res) => {
-        if (res.data.success && res.data.data.length > 0) {
-          setDepartments(res.data.data);
-          setDepartmentId(res.data.data[0].id);
-        }
-      }).catch(() => {});
-    }
-  }, [hospitalId]);
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Only accept numeric digits, max 10
+    const rawVal = e.target.value.replace(/\D/g, '');
+    const cleanVal = rawVal.slice(0, 10);
+    setPhone(cleanVal);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !email || !phone || !password) {
-      setError('Please fill in all required basic fields.');
+    if (!name.trim() || !email.trim() || !phone.trim() || !password) {
+      setError('Please fill in all required fields.');
       return;
     }
 
-    if (role === 'DOCTOR' && (!specialization || !qualification)) {
-      setError('Please enter specialization and qualification for doctor registration.');
+    // Phone Number validation (strict 10 digits)
+    if (phone.length !== 10) {
+      setError('Phone number must be exactly 10 digits.');
       return;
+    }
+
+    if (role === 'DOCTOR') {
+      if (!specialization.trim() || !qualification.trim()) {
+        setError('Please enter specialization and qualification for doctor registration.');
+        return;
+      }
+
+      const finalHospital = isCustomHospital ? customHospitalName.trim() : selectedHospitalName;
+      const finalDepartment = isCustomDepartment ? customDepartmentName.trim() : selectedDepartmentName;
+
+      if (!finalHospital) {
+        setError('Please select or type your Hospital Name.');
+        return;
+      }
+      if (!finalDepartment) {
+        setError('Please select or type your Department Name.');
+        return;
+      }
     }
 
     if (role === 'ADMIN' && adminPasscode !== 'ADMIN2026' && adminPasscode !== 'Admin@123') {
@@ -92,15 +143,18 @@ export const RegisterPage: React.FC = () => {
       setLoading(true);
       setError(null);
 
+      const finalHospital = isCustomHospital ? customHospitalName.trim() : selectedHospitalName;
+      const finalDepartment = isCustomDepartment ? customDepartmentName.trim() : selectedDepartmentName;
+
       const extraData = role === 'DOCTOR' ? {
-        specialization,
-        qualification,
-        hospital_id: hospitalId,
-        department_id: departmentId,
+        specialization: specialization.trim(),
+        qualification: qualification.trim(),
+        hospital_name: finalHospital,
+        department_name: finalDepartment,
         average_consultation_time: avgConsultationTime,
       } : {};
 
-      await register(name, email, phone, password, role, extraData);
+      await register(name.trim(), email.trim(), phone.trim(), password, role, extraData);
 
       if (role === 'PATIENT') navigate('/patient/dashboard');
       else if (role === 'DOCTOR') navigate('/doctor/dashboard');
@@ -201,16 +255,23 @@ export const RegisterPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Phone Number
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Phone Number
+                  </label>
+                  <span className={`text-[11px] font-semibold ${phone.length === 10 ? 'text-emerald-600' : 'text-slate-400'}`}>
+                    {phone.length}/10 digits
+                  </span>
+                </div>
                 <div className="relative">
                   <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
                   <input
                     type="tel"
+                    inputMode="numeric"
+                    maxLength={10}
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+91 98765 43210"
+                    onChange={handlePhoneChange}
+                    placeholder="9876543210 (10 digits)"
                     className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-colors"
                     required
                   />
@@ -256,7 +317,7 @@ export const RegisterPage: React.FC = () => {
 
             {/* Doctor Specific Section */}
             {role === 'DOCTOR' && (
-              <div className="pt-2 border-t border-slate-100 space-y-4">
+              <div className="pt-3 border-t border-slate-100 space-y-4">
                 <div className="text-xs font-bold text-brand-700 uppercase tracking-wider flex items-center gap-1.5">
                   <Stethoscope className="w-4 h-4" />
                   Doctor Credentials & Practice Info
@@ -298,38 +359,113 @@ export const RegisterPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                      Hospital
+                {/* Hospital Selection / Custom Entry */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Hospital / Clinic Name
                     </label>
-                    <div className="relative">
-                      <Building2 className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
-                      <select
-                        value={hospitalId}
-                        onChange={(e) => setHospitalId(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-colors"
-                      >
-                        {hospitals.map((h) => (
-                          <option key={h.id} value={h.id}>{h.name}</option>
-                        ))}
-                      </select>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsCustomHospital(!isCustomHospital)}
+                      className="text-xs text-brand-600 hover:text-brand-700 font-semibold flex items-center gap-1"
+                    >
+                      {isCustomHospital ? (
+                        <>
+                          <ListFilter className="w-3.5 h-3.5" />
+                          Choose from List
+                        </>
+                      ) : (
+                        <>
+                          <Edit3 className="w-3.5 h-3.5" />
+                          Type Custom Hospital
+                        </>
+                      )}
+                    </button>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                      Department
-                    </label>
-                    <select
-                      value={departmentId}
-                      onChange={(e) => setDepartmentId(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-colors"
-                    >
-                      {departments.map((d) => (
-                        <option key={d.id} value={d.id}>{d.name}</option>
-                      ))}
-                    </select>
+                  {isCustomHospital ? (
+                    <div className="relative">
+                      <Building2 className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+                      <input
+                        type="text"
+                        value={customHospitalName}
+                        onChange={(e) => setCustomHospitalName(e.target.value)}
+                        placeholder="e.g. City Life Hospital & Care Center"
+                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-brand-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-colors"
+                        required
+                      />
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <Building2 className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5 pointer-events-none" />
+                      <select
+                        value={selectedHospitalName}
+                        onChange={(e) => {
+                          if (e.target.value === '__OTHER__') {
+                            setIsCustomHospital(true);
+                          } else {
+                            setSelectedHospitalName(e.target.value);
+                          }
+                        }}
+                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-colors"
+                      >
+                        {hospitalList.map((h) => (
+                          <option key={h.id || h.name} value={h.name}>
+                            {h.name}
+                          </option>
+                        ))}
+                        <option value="__OTHER__">➕ Type Custom Hospital / Clinic Name...</option>
+                      </select>
+                    </div>
+                  )}
+                </div>
+
+                {/* Department Selection / Custom Entry */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                        Department
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setIsCustomDepartment(!isCustomDepartment)}
+                        className="text-[11px] text-brand-600 hover:text-brand-700 font-semibold flex items-center gap-1"
+                      >
+                        {isCustomDepartment ? 'Select list' : 'Type custom'}
+                      </button>
+                    </div>
+
+                    {isCustomDepartment ? (
+                      <input
+                        type="text"
+                        value={customDepartmentName}
+                        onChange={(e) => setCustomDepartmentName(e.target.value)}
+                        placeholder="e.g. Oncology & Chemotherapy"
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-brand-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-colors"
+                        required
+                      />
+                    ) : (
+                      <select
+                        value={selectedDepartmentName}
+                        onChange={(e) => {
+                          if (e.target.value === '__OTHER__') {
+                            setIsCustomDepartment(true);
+                          } else {
+                            setSelectedDepartmentName(e.target.value);
+                          }
+                        }}
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-colors"
+                      >
+                        {departmentList.map((d) => (
+                          <option key={d.id || d.name} value={d.name}>
+                            {d.name}
+                          </option>
+                        ))}
+                        <option value="__OTHER__">➕ Type Custom Department...</option>
+                      </select>
+                    )}
                   </div>
 
                   <div>
