@@ -451,18 +451,28 @@ export const DoctorDashboard: React.FC = () => {
             </div>
 
             <div className="space-y-2 text-xs text-slate-700 pt-1">
-              <div>
-                <span className="text-slate-400 block font-semibold">Patient Name:</span>
-                <strong className="text-slate-900 text-sm">{selectedTokenForPriority?.patient_name || 'Patient'}</strong>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <span className="text-slate-400 block font-semibold">Patient Name:</span>
+                  <strong className="text-slate-900 text-sm">{selectedTokenForPriority?.patient_name || 'Patient'}</strong>
+                </div>
+                <div>
+                  <span className="text-slate-400 block font-semibold">Phone:</span>
+                  <span className="text-slate-700 font-mono">{selectedTokenForPriority?.patient_phone || 'Not provided'}</span>
+                </div>
               </div>
+
               <div>
-                <span className="text-slate-400 block font-semibold">Phone:</span>
-                <span className="text-slate-700 font-mono">{selectedTokenForPriority?.patient_phone || 'Not provided'}</span>
+                <span className="text-slate-400 block font-semibold">Chief Problem & Onset:</span>
+                <p className="p-2.5 bg-white rounded-xl border border-brand-100 font-medium text-slate-800">
+                  {selectedTokenForPriority?.appointment_id ? 'Diagnostic consultation booked via AI Assistant with onset tracking.' : 'General consultation'}
+                </p>
               </div>
+
               <div>
-                <span className="text-slate-400 block font-semibold">Triage Summary:</span>
-                <p className="p-3 bg-white rounded-xl border border-brand-200 font-medium text-slate-800 leading-relaxed">
-                  Patient entered booking through AI Medical Intake Assistant. Triage classified as {selectedTokenForPriority?.priority || 'NORMAL'} priority with estimated consultation duration of ~{queueState?.doctor.average_consultation_time || 10} minutes.
+                <span className="text-slate-400 block font-semibold">Interim Pre-Consultation Guidance:</span>
+                <p className="p-2.5 bg-emerald-50/80 rounded-xl border border-emerald-200 text-emerald-900 font-medium">
+                  Patient advised with temporary safe comfort relief and hydration pending doctor examination.
                 </p>
               </div>
             </div>

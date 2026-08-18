@@ -13,53 +13,62 @@ import {
   AlertTriangle,
   Flame,
   Check,
-  ShieldCheck,
+  ShieldAlert,
   Send,
   User,
   Bot,
   HeartPulse,
+  Pill,
   Award,
   ChevronRight,
-  RefreshCw
+  Info,
+  ShieldCheck
 } from 'lucide-react';
-import { doctorApi, appointmentApi, aiApi, TriageResponse } from '../../services/api.js';
+import { doctorApi, appointmentApi, aiApi, TriageResponse, InterimRelief } from '../../services/api.js';
 import { Doctor, Appointment, PriorityLevel } from '../../types/index.js';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner.js';
 
 const QUICK_SYMPTOM_CHIPS = [
-  { label: '🫀 Chest Pain / Palpitations', value: 'I have severe chest tightness and palpitations since morning.' },
-  { label: '🌿 Skin Rash / Allergy', value: 'I have red itchy skin rash and hives on my arms.' },
-  { label: '🦴 Knee / Back Joint Pain', value: 'I have severe lower back and knee joint stiffness.' },
-  { label: '🤒 High Fever & Cough', value: 'I have high fever with chills, body ache, and persistent cough.' },
-  { label: '👶 Child / Baby Sickness', value: 'My child has a high fever, running nose, and poor appetite.' },
-  { label: '🧠 Severe Migraine / Headache', value: 'I have throbbing headache on one side with nausea.' },
-  { label: '🤢 Stomach Ache / Acidity', value: 'I have severe burning abdominal pain and indigestion.' },
-  { label: '👁️ Eye Irritation / Redness', value: 'I have burning red eyes and blurry vision for 2 days.' },
+  { label: '🫀 Chest Pain / Palpitations', value: 'I have severe chest tightness and palpitations.', onset: 'Since morning', severity: 'Severe' },
+  { label: '🌿 Skin Rash / Severe Itch', value: 'I have red itchy skin rash with burning sensation.', onset: '2-3 Days', severity: 'Moderate' },
+  { label: '🦴 Knee / Back Joint Pain', value: 'I have severe lower back and knee joint pain making it hard to walk.', onset: '1-2 Weeks', severity: 'Moderate' },
+  { label: '🤒 High Fever with Chills', value: 'I have 102°F fever with body chills and severe headache.', onset: 'Since yesterday', severity: 'Severe' },
+  { label: '👶 Child Fever & Cough', value: 'My child is running a high fever and coughing continuously.', onset: '2 Days', severity: 'Moderate' },
+  { label: '🧠 Severe Migraine / Nausea', value: 'I have intense throbbing one-sided headache with vomiting sensation.', onset: 'Today', severity: 'Severe' },
+  { label: '🤢 Burning Stomach Acidity', value: 'I have severe burning abdominal pain and acid reflux after eating.', onset: '3 Days', severity: 'Moderate' },
+  { label: '👁️ Red Eye & Blurry Vision', value: 'I have red painful eye discharge and stinging sensation.', onset: '2 Days', severity: 'Moderate' },
 ];
 
 export const BookAppointmentPage: React.FC = () => {
   const navigate = useNavigate();
 
-  // Wizard Step (1: Symptoms, 2: Duration & Slot, 3: AI Analyzing, 4: Matched Doctors, 5: Confirmed Token)
+  // Wizard Step:
+  // 1: Chief Symptoms
+  // 2: Onset & Severity Details
+  // 3: AI Analyzing
+  // 4: AI Assessment, Interim Relief & Matched Specialists
+  // 5: Confirmed Token Pass
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [loading, setLoading] = useState<boolean>(true);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
 
-  // Step 1 State: Symptoms
+  // Step 1: Chief Problem
   const [symptomText, setSymptomText] = useState<string>('');
 
-  // Step 2 State: Additional Details & Date/Time
-  const [duration, setDuration] = useState<string>('2-3 Days');
+  // Step 2: Onset & Clinical Characteristics
+  const [onsetPeriod, setOnsetPeriod] = useState<string>('2-3 Days');
   const [severity, setSeverity] = useState<'Mild' | 'Moderate' | 'Severe'>('Moderate');
+  const [painType, setPainType] = useState<string>('Continuous / Throbbing');
+  const [associatedSymptoms, setAssociatedSymptoms] = useState<string>('');
   const [appointmentDate, setAppointmentDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [appointmentTime, setAppointmentTime] = useState<string>('10:00 AM');
 
-  // Step 4 State: AI Analysis Result & Recommended Doctors
+  // Step 4: AI Results
   const [aiTriageResult, setAiTriageResult] = useState<TriageResponse | null>(null);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
 
-  // Step 5 State: Confirmed Appointment & Token
+  // Step 5: Confirmed Token
   const [confirmedAppointment, setConfirmedAppointment] = useState<Appointment | null>(null);
 
   useEffect(() => {
@@ -78,17 +87,22 @@ export const BookAppointmentPage: React.FC = () => {
     fetchDoctors();
   }, []);
 
-  // Action: Submit Symptoms & Additional Info to AI Assistant
-  const handleRunAiTriage = async () => {
+  // Action: Submit to AI Diagnostic Engine
+  const handleRunAiDiagnostic = async () => {
     if (!symptomText.trim()) return;
 
-    setCurrentStep(3); // Show AI Analyzing Animation
+    setCurrentStep(3); // Show Analyzing Animation
 
     try {
       const messages = [
         {
           role: 'user' as const,
-          content: `Symptoms: ${symptomText}. Duration: ${duration}. Severity: ${severity}. Preferred slot: ${appointmentDate} @ ${appointmentTime}.`,
+          content: `Chief Complaint: ${symptomText}.
+Onset & Duration: Facing this issue from ${onsetPeriod}.
+Severity Level: ${severity} pain/discomfort.
+Pain/Symptom Nature: ${painType}.
+Other Accompanying Symptoms: ${associatedSymptoms || 'None reported'}.
+Requested Appointment Slot: ${appointmentDate} at ${appointmentTime}.`,
         },
       ];
 
@@ -103,17 +117,16 @@ export const BookAppointmentPage: React.FC = () => {
         }
       }
     } catch (err: any) {
-      console.error('AI Triage error:', err);
-      // Fallback
+      console.error('AI Diagnostic error:', err);
       if (doctors.length > 0) {
         setSelectedDoctor(doctors[0]);
       }
     } finally {
-      setCurrentStep(4); // Move to Doctor selection
+      setCurrentStep(4);
     }
   };
 
-  // Action: Confirm & Book Token
+  // Action: Confirm & Book Digital Token
   const handleConfirmBooking = async (docToBook?: Doctor) => {
     const targetDoc = docToBook || selectedDoctor;
     if (!targetDoc) return;
@@ -123,6 +136,7 @@ export const BookAppointmentPage: React.FC = () => {
 
       const triage = aiTriageResult?.triage;
       const urgency = triage?.urgency || (severity === 'Severe' ? 'PRIORITY' : 'NORMAL');
+      const interim = aiTriageResult?.interim_relief;
 
       const res = await appointmentApi.create({
         doctor_id: targetDoc.id,
@@ -133,19 +147,20 @@ export const BookAppointmentPage: React.FC = () => {
           : `${targetDoc.specialization} Consultation`,
         ai_summary: {
           chief_complaint: triage?.chief_complaint || symptomText,
-          duration: triage?.duration || duration,
+          onset_and_duration: triage?.onset_and_duration || onsetPeriod,
           severity: triage?.severity || severity,
+          pain_characteristics: triage?.pain_characteristics || painType,
           urgency: urgency,
-          notes: triage?.notes || `Patient booked via SmartQueue AI Assistant.`,
+          interim_medication: interim?.recommended_remedy,
+          notes: triage?.notes || `Patient booked via SmartQueue AI Assistant. Onset: ${onsetPeriod}.`,
         },
         priority: urgency as PriorityLevel,
       });
 
       if (res.data.success) {
         setConfirmedAppointment(res.data.data);
-        setCurrentStep(5); // Confirmation Token Screen
+        setCurrentStep(5);
 
-        // Confetti celebration
         confetti({
           particleCount: 130,
           spread: 80,
@@ -163,30 +178,30 @@ export const BookAppointmentPage: React.FC = () => {
   if (loading) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-16">
-        <LoadingSpinner message="Initializing SmartQueue AI Medical Assistant..." size="lg" />
+        <LoadingSpinner message="Initializing SmartQueue Clinical Diagnostic Assistant..." size="lg" />
       </div>
     );
   }
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-10 space-y-8">
-      {/* STEP PROGRESS BAR (Steps 1 to 4) */}
+      {/* STEP PROGRESS BAR */}
       {currentStep < 5 && (
         <div className="space-y-4">
           <div className="flex items-center justify-between text-xs font-bold text-slate-500 uppercase tracking-wider">
             <span className="flex items-center gap-1.5 text-brand-700">
               <Sparkles className="w-4 h-4 text-brand-600" />
-              AI Appointment Assistant
+              AI Clinical Diagnostic Intake
             </span>
             <span>Step {Math.min(currentStep, 4)} of 4</span>
           </div>
 
           <div className="grid grid-cols-4 gap-2">
             {[
-              { step: 1, label: '1. Symptoms' },
-              { step: 2, label: '2. Details & Slot' },
+              { step: 1, label: '1. Problem' },
+              { step: 2, label: '2. Onset & Details' },
               { step: 3, label: '3. AI Triage' },
-              { step: 4, label: '4. Matched Doctor' },
+              { step: 4, label: '4. Relief & Doctor' },
             ].map((s) => (
               <div
                 key={s.step}
@@ -200,7 +215,7 @@ export const BookAppointmentPage: React.FC = () => {
       )}
 
       {/* ========================================================================= */}
-      {/* STEP 1: TELL YOUR SYMPTOMS */}
+      {/* STEP 1: CHIEF SYMPTOM / PROBLEM */}
       {/* ========================================================================= */}
       {currentStep === 1 && (
         <div className="bg-white p-6 sm:p-10 rounded-3xl border border-slate-200 shadow-sm space-y-6 animate-fade-in">
@@ -208,34 +223,38 @@ export const BookAppointmentPage: React.FC = () => {
             <div className="w-12 h-12 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center font-bold text-xl shadow-xs">
               <Bot className="w-6 h-6" />
             </div>
-            <h2 className="text-2xl font-extrabold text-slate-900">What symptoms are you experiencing?</h2>
+            <h2 className="text-2xl font-extrabold text-slate-900">What health problem are you facing?</h2>
             <p className="text-sm text-slate-500">
-              Type your problem in simple words or choose from common issues below.
+              Describe your symptoms in your own words or select one of the common conditions below.
             </p>
           </div>
 
-          {/* Symptom Input Textarea */}
-          <div className="space-y-2">
+          {/* Text Area */}
+          <div>
             <textarea
               rows={4}
               value={symptomText}
               onChange={(e) => setSymptomText(e.target.value)}
-              placeholder="e.g. I have severe chest pain and breathlessness since morning, or red itchy rash on skin..."
+              placeholder="e.g. I have severe burning stomach pain after meals and frequent nausea..."
               className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm sm:text-base text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-all resize-none font-medium"
             />
           </div>
 
-          {/* Quick 1-Click Symptom Chips */}
+          {/* 1-Click Quick Chips */}
           <div className="space-y-2.5">
             <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider">
-              Or pick a common issue:
+              Quick Suggestions:
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {QUICK_SYMPTOM_CHIPS.map((chip, idx) => (
                 <button
                   key={idx}
                   type="button"
-                  onClick={() => setSymptomText(chip.value)}
+                  onClick={() => {
+                    setSymptomText(chip.value);
+                    setOnsetPeriod(chip.onset);
+                    setSeverity(chip.severity as any);
+                  }}
                   className={`p-3 text-left rounded-xl text-xs font-medium border transition-all flex items-center justify-between ${
                     symptomText === chip.value
                       ? 'bg-brand-50 border-brand-500 text-brand-800 font-bold shadow-xs ring-1 ring-brand-400'
@@ -256,57 +275,57 @@ export const BookAppointmentPage: React.FC = () => {
               disabled={!symptomText.trim()}
               className="w-full sm:w-auto px-8 py-3.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-40"
             >
-              Continue to Details <ArrowRight className="w-4 h-4" />
+              Continue: Onset & Timing <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         </div>
       )}
 
       {/* ========================================================================= */}
-      {/* STEP 2: DURATION, SEVERITY & PREFERRED SLOT */}
+      {/* STEP 2: ONSET, DURATION, SEVERITY & TIME SLOT */}
       {/* ========================================================================= */}
       {currentStep === 2 && (
         <div className="bg-white p-6 sm:p-10 rounded-3xl border border-slate-200 shadow-sm space-y-6 animate-fade-in">
           <div className="space-y-1">
-            <h2 className="text-2xl font-extrabold text-slate-900">How long have you had this?</h2>
+            <h2 className="text-2xl font-extrabold text-slate-900">From when are you facing this issue?</h2>
             <p className="text-sm text-slate-500">
-              Help our AI assistant understand the urgency and pick the best time for your consultation.
+              Provide timing and pain details so our AI can evaluate urgency and suggest interim comfort relief if needed.
             </p>
           </div>
 
-          {/* Duration Selector */}
+          {/* Question 1: Onset & Duration */}
           <div className="space-y-2">
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-              Duration of Symptoms
+              1. From when did this start?
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {['Just Today', '2-3 Days', '1-2 Weeks', '1+ Month'].map((d) => (
+              {['Since Morning / Today', '2-3 Days Ago', '1-2 Weeks Ago', 'Over 1 Month (Chronic)'].map((p) => (
                 <button
-                  key={d}
+                  key={p}
                   type="button"
-                  onClick={() => setDuration(d)}
-                  className={`py-3 px-3 rounded-xl text-xs font-bold border transition-all ${
-                    duration === d
+                  onClick={() => setOnsetPeriod(p)}
+                  className={`py-3 px-2 rounded-xl text-xs font-bold border transition-all text-center ${
+                    onsetPeriod === p
                       ? 'bg-brand-600 text-white border-brand-600 shadow-sm'
                       : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                   }`}
                 >
-                  {d}
+                  {p}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Severity Level */}
+          {/* Question 2: Pain Severity Level */}
           <div className="space-y-2">
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-              Severity / Pain Level
+              2. How intense is the discomfort or pain?
             </label>
             <div className="grid grid-cols-3 gap-2">
               {[
-                { level: 'Mild', desc: 'Manageable discomfort' },
-                { level: 'Moderate', desc: 'Affects daily tasks' },
-                { level: 'Severe', desc: 'Urgent / Intense pain' },
+                { level: 'Mild', desc: 'Mild discomfort / manageable' },
+                { level: 'Moderate', desc: 'Noticeable pain / disturbs routine' },
+                { level: 'Severe', desc: 'Intense pain / needs quick relief' },
               ].map((s) => (
                 <button
                   key={s.level}
@@ -325,11 +344,44 @@ export const BookAppointmentPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Appointment Date & Slot */}
+          {/* Question 3: Nature of Pain & Other Symptoms */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                3. Nature of sensation:
+              </label>
+              <select
+                value={painType}
+                onChange={(e) => setPainType(e.target.value)}
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-900 focus:ring-2 focus:ring-brand-500"
+              >
+                <option value="Continuous / Throbbing">Continuous / Throbbing</option>
+                <option value="Sharp & Piercing">Sharp & Piercing</option>
+                <option value="Burning / Acidic sensation">Burning / Acidic sensation</option>
+                <option value="Dull Ache / Heaviness">Dull Ache / Heaviness</option>
+                <option value="Intermittent / Comes & Goes">Intermittent / Comes & Goes</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                Any other symptoms (e.g. fever, nausea)?
+              </label>
+              <input
+                type="text"
+                value={associatedSymptoms}
+                onChange={(e) => setAssociatedSymptoms(e.target.value)}
+                placeholder="e.g. mild fever, vomiting, dizziness..."
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-900 focus:ring-2 focus:ring-brand-500 focus:bg-white"
+              />
+            </div>
+          </div>
+
+          {/* Target Date & Slot Selection */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                <Calendar className="w-4 h-4 text-brand-600" /> Preferred Date
+                <Calendar className="w-4 h-4 text-brand-600" /> Preferred Consultation Date
               </label>
               <input
                 type="date"
@@ -366,17 +418,17 @@ export const BookAppointmentPage: React.FC = () => {
             </button>
 
             <button
-              onClick={handleRunAiTriage}
+              onClick={handleRunAiDiagnostic}
               className="px-8 py-3.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-2xl shadow-md transition-all flex items-center gap-2 text-sm"
             >
-              <Sparkles className="w-4 h-4" /> Find Matching Specialists
+              <Sparkles className="w-4 h-4" /> Run AI Triage & Match Specialist
             </button>
           </div>
         </div>
       )}
 
       {/* ========================================================================= */}
-      {/* STEP 3: AI ANALYZING ANIMATION */}
+      {/* STEP 3: AI DIAGNOSTIC ANIMATION */}
       {/* ========================================================================= */}
       {currentStep === 3 && (
         <div className="bg-white p-12 sm:p-16 rounded-3xl border border-slate-200 shadow-sm text-center space-y-6 animate-fade-in max-w-lg mx-auto">
@@ -385,9 +437,9 @@ export const BookAppointmentPage: React.FC = () => {
           </div>
 
           <div className="space-y-2">
-            <h3 className="text-xl font-black text-slate-900">AI Assistant is analyzing your symptoms...</h3>
+            <h3 className="text-xl font-black text-slate-900">Analyzing clinical symptoms & onset...</h3>
             <p className="text-xs text-slate-500 leading-relaxed">
-              Evaluating medical urgency, determining exact specialization required, and matching available registered specialists in real-time.
+              Evaluating duration from {onsetPeriod}, assessing {severity} urgency, preparing interim comfort guidance, and matching top doctors.
             </p>
           </div>
 
@@ -400,11 +452,11 @@ export const BookAppointmentPage: React.FC = () => {
       )}
 
       {/* ========================================================================= */}
-      {/* STEP 4: AI TRIAGE ASSESSMENT & MATCHED DOCTOR CARDS */}
+      {/* STEP 4: AI TRIAGE, TEMPORARY RELIEF ADVICE & MATCHED SPECIALISTS */}
       {/* ========================================================================= */}
       {currentStep === 4 && (
         <div className="space-y-6 animate-fade-in">
-          {/* AI Clinical Summary Banner */}
+          {/* 1. Clinical Assessment Banner */}
           <div className="bg-white p-6 sm:p-8 rounded-3xl border border-brand-200 shadow-sm space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
@@ -413,15 +465,14 @@ export const BookAppointmentPage: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="text-base font-extrabold text-slate-900">
-                    Clinical Triage & Specialist Match Result
+                    Clinical Intake & Specialist Assessment
                   </h3>
                   <span className="text-xs text-slate-500">
-                    Field Needed: <strong>{aiTriageResult?.triage?.specialization_needed || 'Specialist Consultation'}</strong>
+                    Specialty: <strong className="text-brand-900">{aiTriageResult?.triage?.specialization_needed || 'Specialist Consultation'}</strong> • Onset: {aiTriageResult?.triage?.onset_and_duration || onsetPeriod}
                   </span>
                 </div>
               </div>
 
-              {/* Urgency Badge */}
               <span
                 className={`px-3 py-1.5 rounded-full text-xs font-extrabold self-start sm:self-auto ${
                   aiTriageResult?.triage?.urgency === 'EMERGENCY'
@@ -435,7 +486,6 @@ export const BookAppointmentPage: React.FC = () => {
               </span>
             </div>
 
-            {/* AI message explanation */}
             {aiTriageResult?.message && (
               <p className="text-xs sm:text-sm text-slate-700 bg-brand-50/70 p-4 rounded-2xl border border-brand-100 leading-relaxed font-medium">
                 "{aiTriageResult.message}"
@@ -443,7 +493,61 @@ export const BookAppointmentPage: React.FC = () => {
             )}
           </div>
 
-          {/* Matched Doctor Cards List */}
+          {/* 2. TEMPORARY INTERIM COMFORT / MEDICATION GUIDANCE WITH DISCLAIMER */}
+          {aiTriageResult?.interim_relief && (
+            <div className="bg-gradient-to-r from-cyan-50 via-teal-50 to-emerald-50 p-6 sm:p-7 rounded-3xl border-2 border-teal-200/80 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-teal-600 text-white flex items-center justify-center shadow-xs">
+                    <Pill className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="font-extrabold text-sm text-teal-950">
+                      Temporary Relief Advice (Until Appointment at {appointmentTime})
+                    </h4>
+                    <span className="text-[11px] text-teal-700 font-medium">
+                      Safe over-the-counter measure for comfort management
+                    </span>
+                  </div>
+                </div>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-200 text-teal-900 uppercase">
+                  Interim Comfort
+                </span>
+              </div>
+
+              {/* Remedy details */}
+              <div className="p-4 bg-white/90 rounded-2xl border border-teal-100 space-y-2 text-xs text-slate-800">
+                <div className="flex items-start gap-2">
+                  <span className="font-bold text-teal-900 min-w-24">Suggested:</span>
+                  <span className="font-bold text-slate-900">{aiTriageResult.interim_relief.recommended_remedy}</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="font-bold text-teal-900 min-w-24">Purpose:</span>
+                  <span>{aiTriageResult.interim_relief.purpose}</span>
+                </div>
+                {aiTriageResult.interim_relief.safety_precautions && (
+                  <div className="flex items-start gap-2 text-slate-600">
+                    <span className="font-bold text-teal-900 min-w-24">Precautions:</span>
+                    <span>{aiTriageResult.interim_relief.safety_precautions}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Prominent Medical Disclaimer Box */}
+              <div className="p-3.5 bg-amber-50/90 border border-amber-300/80 rounded-2xl text-[11px] text-amber-900 space-y-1">
+                <div className="font-bold flex items-center gap-1.5 text-amber-950">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                  Important Medical Disclaimer
+                </div>
+                <p className="leading-relaxed">
+                  {aiTriageResult.interim_relief.disclaimer ||
+                    'This temporary relief is suggested to help manage your discomfort until your appointment with the doctor. If you are willing and have no known allergies or medical restrictions, you may take this as directed. Seek immediate hospital emergency care if symptoms worsen.'}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* 3. Matched Doctor Cards */}
           <div className="space-y-3">
             <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
               Recommended Specialists ({aiTriageResult?.recommended_doctors?.length || doctors.slice(0, 3).length})
@@ -455,7 +559,7 @@ export const BookAppointmentPage: React.FC = () => {
                 : doctors.slice(0, 3).map((d) => ({
                     doctor: d,
                     match_score: 95,
-                    match_reason: `Registered specialist in ${d.specialization}`,
+                    match_reason: `Specialized in ${d.specialization}`,
                   }))
               ).map((item) => {
                 const doc = item.doctor;
@@ -472,7 +576,6 @@ export const BookAppointmentPage: React.FC = () => {
                     }`}
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      {/* Doctor Info */}
                       <div className="flex items-start gap-4">
                         <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-brand-600 to-cyan-500 text-white flex items-center justify-center font-extrabold text-lg shadow-sm flex-shrink-0">
                           DR
@@ -491,16 +594,15 @@ export const BookAppointmentPage: React.FC = () => {
 
                           <div className="mt-2 flex items-center gap-3 text-xs">
                             <span className="text-slate-500 flex items-center gap-1">
-                              <Clock className="w-3.5 h-3.5 text-brand-600" /> ~{doc.average_consultation_time} min / patient
+                              <Clock className="w-3.5 h-3.5 text-brand-600" /> ~{doc.average_consultation_time} min / consult
                             </span>
                             <span className="text-emerald-600 font-bold flex items-center gap-1">
-                              <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Available Today
+                              <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Available
                             </span>
                           </div>
                         </div>
                       </div>
 
-                      {/* Match Score & 1-Click Book Button */}
                       <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
                         <span className="px-3 py-1 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-extrabold rounded-xl flex items-center gap-1">
                           <Sparkles className="w-3 h-3 text-emerald-600" />
@@ -522,7 +624,6 @@ export const BookAppointmentPage: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* AI Match Reason note */}
                     {item.match_reason && (
                       <p className="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-600 italic">
                         "{item.match_reason}"
@@ -534,7 +635,7 @@ export const BookAppointmentPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Navigation Controls */}
+          {/* Navigation */}
           <div className="flex items-center justify-between pt-4">
             <button
               onClick={() => setCurrentStep(2)}
@@ -549,7 +650,7 @@ export const BookAppointmentPage: React.FC = () => {
               className="px-8 py-3.5 bg-brand-600 hover:bg-brand-700 text-white font-extrabold rounded-2xl shadow-lg transition-all flex items-center gap-2 text-sm disabled:opacity-50"
             >
               <Sparkles className="w-4 h-4" />
-              {submitting ? 'Issuing Token...' : `Confirm & Get Digital Token`}
+              {submitting ? 'Issuing Token...' : 'Confirm & Get Digital Token'}
             </button>
           </div>
         </div>
@@ -572,11 +673,11 @@ export const BookAppointmentPage: React.FC = () => {
               Appointment Confirmed!
             </h2>
             <p className="text-xs sm:text-sm text-slate-500">
-              Your appointment is registered directly with the doctor. Track queue progress from anywhere.
+              Your appointment is registered directly with the doctor. You can track live queue status from anywhere.
             </p>
           </div>
 
-          {/* Big Digital Queue Pass */}
+          {/* Digital Queue Pass */}
           <div className="p-8 bg-gradient-to-br from-brand-700 via-cyan-800 to-slate-900 text-white rounded-3xl shadow-2xl space-y-6 text-left relative overflow-hidden border border-brand-500/30">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-widest text-cyan-300 flex items-center gap-1.5">

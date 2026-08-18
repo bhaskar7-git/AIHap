@@ -12,17 +12,28 @@ export interface ChatMessage {
   content: string;
 }
 
+export interface InterimRelief {
+  recommended_remedy: string;
+  purpose: string;
+  dosage_instruction: string;
+  disclaimer: string;
+  safety_precautions: string;
+}
+
 export interface TriageResult {
   message: string;
   is_ready_for_recommendation: boolean;
+  diagnostic_stage?: 'GATHERING_INFO' | 'COMPLETE';
   triage?: {
     specialization_needed: string;
     urgency: 'NORMAL' | 'PRIORITY' | 'EMERGENCY';
     chief_complaint: string;
-    duration?: string;
+    onset_and_duration?: string;
     severity?: string;
+    pain_characteristics?: string;
     notes?: string;
   };
+  interim_relief?: InterimRelief;
   recommended_doctors?: Array<{
     doctor: Doctor;
     match_score: number; // 0 - 100
@@ -34,7 +45,8 @@ export interface TriageResult {
 
 export class GroqService {
   /**
-   * Process patient conversation, assess symptoms, determine urgency & match registered doctors.
+   * Process patient conversation, conduct deep clinical intake, assess onset & severity,
+   * provide safe temporary interim relief advice, and match the best registered doctors.
    */
   public async analyzeAndTriage(
     messages: ChatMessage[],
@@ -55,38 +67,59 @@ export class GroqService {
         available: d.available,
       }));
 
-      const systemPrompt = `You are "SmartQueue AI Assistant", an empathetic, highly skilled clinical triage and direct 1:1 doctor matching expert.
-Your job:
-1. Converse with the patient to understand their health symptoms, duration, pain/severity, and any relevant context.
-2. Identify the exact medical specialization needed (e.g. Cardiology, Dermatology, Orthopedics, General Medicine, Pediatrics, Neurology, etc.).
-3. Assess medical urgency:
-   - "EMERGENCY": Severe chest pain, stroke signs, respiratory distress, acute trauma, severe bleeding.
-   - "PRIORITY": High fever, acute severe pain, rapidly spreading rash, acute asthma attack.
-   - "NORMAL": Routine checkup, mild cold/cough, joint stiffness, chronic follow-ups, minor rash.
-4. Match against the registered doctors in our platform:
+      const systemPrompt = `You are "SmartQueue AI Assistant", an empathetic, highly skilled clinical intake, diagnostic triage, and direct 1:1 doctor matching expert.
+
+Your Clinical Guidelines:
+1. DIALOGUE INTAKE:
+   - Understand the patient's chief complaint in detail.
+   - ALWAYS clarify onset & duration: "From when are you facing this issue?" (e.g. past few hours, 2 days, 1 week).
+   - Understand symptom nature: pain type (throbbing, sharp, burning, dull), severity (Mild / Moderate / Severe), and accompanying symptoms (fever, nausea, swelling, radiation of pain).
+
+2. MEDICAL SPECIALIZATION & URGENCY:
+   - Identify exact medical specialty (Cardiology, Dermatology, Orthopedics, Gastroenterology, Neurology, ENT, Pulmonology, Pediatrics, Gynecology, etc.).
+   - Assess Urgency:
+     * "EMERGENCY": Severe sudden chest pain radiating to arm/jaw, acute stroke signs, sudden severe respiratory distress, acute profuse bleeding, trauma. (Advise immediate hospital emergency department).
+     * "PRIORITY": High acute fever, intense abdominal colic, acute severe migraine, severe joint swelling.
+     * "NORMAL": Mild/moderate chronic symptoms, routine follow-ups, minor rash, general checkup.
+
+3. TEMPORARY INTERIM COMFORT / MEDICATION (Before Appointment):
+   - If the patient is facing pain, fever, acidity, allergy, or discomfort, and their appointment slot is later in the day or upcoming:
+   - Provide safe, standard over-the-counter (OTC) interim relief to help manage discomfort until their consultation (e.g. Paracetamol 500mg for fever/headache, Antacid/Gel for acid reflux, ORS for dehydration/diarrhea, Warm salt gargle / lozenge for sore throat, Calamine lotion / ice pack for localized swelling/rash).
+   - ALWAYS attach a clear, caring medical disclaimer:
+     "Disclaimer: This is a temporary over-the-counter relief measure to help ease your discomfort until your appointment with the doctor. If you are willing and have no known allergies to this medication, you may take this as directed. If symptoms escalate or emergency red flags develop, seek immediate emergency medical care."
+
+4. DOCTOR MATCHING:
+   - Select the best doctor from registered doctors:
 ${JSON.stringify(doctorsContext, null, 2)}
 
-5. If you do not have enough clarity on symptoms (e.g. just said "hi" or "I am sick"), ask ONE warm, concise clarifying question and set "is_ready_for_recommendation": false.
-6. Once the patient has shared their symptoms, set "is_ready_for_recommendation": true, provide a warm supportive response, and recommend the best matching doctor(s).
-7. If preferred date/time is mentioned (Date: ${preferredDate || 'Not specified'}, Time: ${preferredTime || 'Not specified'}), factor that in.
+Target Date: ${preferredDate || 'Today'} | Target Time: ${preferredTime || 'Upcoming'}
 
-IMPORTANT: Respond ONLY with a valid JSON object matching this structure:
+IMPORTANT: Respond ONLY with a valid JSON object matching this schema:
 {
-  "message": "Empathetic, clear conversational response explaining findings & recommendations to the patient",
+  "message": "Empathetic, clear conversational response explaining clinical assessment, questions, and recommendations",
   "is_ready_for_recommendation": true or false,
+  "diagnostic_stage": "GATHERING_INFO" or "COMPLETE",
   "triage": {
-    "specialization_needed": "string (e.g. Cardiology)",
+    "specialization_needed": "string (e.g. Gastroenterology)",
     "urgency": "NORMAL" | "PRIORITY" | "EMERGENCY",
-    "chief_complaint": "string summary",
-    "duration": "string (e.g. 2 days)",
+    "chief_complaint": "concise summary of problem",
+    "onset_and_duration": "from when (e.g. 3 days ago)",
     "severity": "Mild" | "Moderate" | "Severe",
-    "notes": "concise clinical summary for doctor"
+    "pain_characteristics": "e.g. Burning epigastric pain with nausea",
+    "notes": "structured clinical intake note for the doctor"
+  },
+  "interim_relief": {
+    "recommended_remedy": "string (e.g. Paracetamol 500mg tablet after food or Oral Hydration Salts)",
+    "purpose": "string explaining what this helps with until the appointment",
+    "dosage_instruction": "string standard OTC guidance",
+    "disclaimer": "Disclaimer: This temporary relief is suggested to ease your discomfort until you see the doctor. If you are willing and have no prior allergies or medical restrictions, you may take this as directed. Seek immediate emergency care if symptoms worsen.",
+    "safety_precautions": "string (e.g. Stay hydrated, avoid taking on an empty stomach, avoid if you have liver disease)"
   },
   "recommended_doctor_ids": [
     {
       "doctor_id": "string",
-      "match_score": 95,
-      "match_reason": "string explaining why this doctor is best suited"
+      "match_score": 98,
+      "match_reason": "string explaining why this specialist is the ideal match"
     }
   ],
   "quick_replies": ["string", "string", "string"]
@@ -105,7 +138,7 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure:
         messages: conversationPayload,
         response_format: { type: 'json_object' },
         temperature: 0.2,
-        max_tokens: 1000,
+        max_tokens: 1200,
       });
 
       const responseText = completion.choices[0]?.message?.content || '{}';
@@ -136,22 +169,24 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure:
             d.specialization.toLowerCase().includes(spec) ||
             spec.includes(d.specialization.toLowerCase()) ||
             (d.department_name && d.department_name.toLowerCase().includes(spec)) ||
+            (spec.includes('gastro') && d.specialization.toLowerCase().includes('gastro')) ||
             (spec.includes('cardio') && d.specialization.toLowerCase().includes('cardio')) ||
             (spec.includes('ortho') && d.specialization.toLowerCase().includes('ortho')) ||
             (spec.includes('derma') && d.specialization.toLowerCase().includes('derma')) ||
             (spec.includes('pediat') && d.specialization.toLowerCase().includes('pediat')) ||
+            (spec.includes('neuro') && d.specialization.toLowerCase().includes('neuro')) ||
             (spec.includes('general') && d.specialization.toLowerCase().includes('physician'))
         );
-        matchedDoctors = (fallback.length > 0 ? fallback : doctors.slice(0, 2)).map((d) => ({
+        matchedDoctors = (fallback.length > 0 ? fallback : doctors.slice(0, 3)).map((d) => ({
           doctor: d,
           match_score: 95,
-          match_reason: `Specialized in ${d.specialization} (${d.department_name || 'General Clinic'})`,
+          match_reason: `Specialized in ${d.specialization} (${d.department_name || 'Clinic'})`,
         }));
       }
 
       // If still empty, return top available doctors
       if (matchedDoctors.length === 0 && doctors.length > 0) {
-        matchedDoctors = doctors.slice(0, 2).map((d) => ({
+        matchedDoctors = doctors.slice(0, 3).map((d) => ({
           doctor: d,
           match_score: 90,
           match_reason: `Experienced in ${d.specialization}`,
@@ -161,23 +196,33 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure:
       return {
         message: parsed.message || 'I have evaluated your symptoms and matched you with the best available specialists.',
         is_ready_for_recommendation: parsed.is_ready_for_recommendation ?? (matchedDoctors.length > 0),
+        diagnostic_stage: parsed.diagnostic_stage || 'COMPLETE',
         triage: parsed.triage,
+        interim_relief: parsed.interim_relief,
         recommended_doctors: matchedDoctors,
-        suggested_slots: ['09:00 AM', '10:30 AM', '02:00 PM', '04:30 PM', '06:00 PM'],
-        quick_replies: parsed.quick_replies || ['Book 1st Doctor', 'Choose Morning Slot', 'Check live queue'],
+        suggested_slots: ['09:30 AM', '11:00 AM', '02:30 PM', '04:30 PM', '06:00 PM'],
+        quick_replies: parsed.quick_replies || ['Confirm Top Specialist', 'Change Time Slot', 'Ask Another Question'],
       };
     } catch (error: any) {
-      console.error('Groq AI Triage error:', error);
+      console.error('AI Triage error:', error);
       const doctors = await store.getAllDoctors();
       return {
-        message: "I understand your health concern. Here are the top available specialists ready to assist you:",
+        message: "I have reviewed your symptoms and selected the top available specialists to examine your condition:",
         is_ready_for_recommendation: true,
+        diagnostic_stage: 'COMPLETE',
         triage: {
           specialization_needed: 'General Medicine',
           urgency: 'NORMAL',
-          chief_complaint: messages[messages.length - 1]?.content || 'General Consultation',
-          duration: 'Recent',
+          chief_complaint: messages[messages.length - 1]?.content || 'General Health Consultation',
+          onset_and_duration: 'Recent onset',
           severity: 'Moderate',
+        },
+        interim_relief: {
+          recommended_remedy: 'Stay comfortably hydrated and rest until your consultation time.',
+          purpose: 'General comfort management',
+          dosage_instruction: 'Sip warm water or fluids periodically.',
+          disclaimer: 'Disclaimer: This temporary relief is suggested to ease your discomfort until you see the doctor. If you are willing and have no prior allergies, you may follow these steps. Seek immediate emergency care if symptoms escalate.',
+          safety_precautions: 'Avoid heavy exertion until examined by the doctor.',
         },
         recommended_doctors: doctors.slice(0, 3).map((d) => ({
           doctor: d,

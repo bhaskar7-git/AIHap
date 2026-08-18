@@ -96,17 +96,29 @@ export const doctorApi = {
 };
 
 // --- AI Clinical Triage APIs ---
+export interface InterimRelief {
+  recommended_remedy: string;
+  purpose: string;
+  dosage_instruction: string;
+  disclaimer: string;
+  safety_precautions: string;
+}
+
 export interface TriageResponse {
   message: string;
   is_ready_for_recommendation: boolean;
+  diagnostic_stage?: 'GATHERING_INFO' | 'COMPLETE';
   triage?: {
     specialization_needed: string;
     urgency: 'NORMAL' | 'PRIORITY' | 'EMERGENCY';
     chief_complaint: string;
+    onset_and_duration?: string;
     duration?: string;
     severity?: string;
+    pain_characteristics?: string;
     notes?: string;
   };
+  interim_relief?: InterimRelief;
   recommended_doctors?: Array<{
     doctor: Doctor;
     match_score: number;
