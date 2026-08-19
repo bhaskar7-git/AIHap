@@ -13,6 +13,7 @@ import {
   QrCode,
   Sparkles,
   ShieldCheck,
+  Bot,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.js';
 import { NotificationBell } from '../common/NotificationBell.js';
@@ -63,6 +64,14 @@ export const Navbar: React.FC = () => {
                   >
                     <Sparkles className="w-4 h-4 text-brand-500" />
                     Book Token
+                  </Link>
+                  {/* Aria AI Chatbot — highlighted */}
+                  <Link
+                    to="/patient/book-appointment"
+                    className="px-3 py-2 text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-cyan-500 hover:from-brand-700 hover:to-cyan-600 rounded-lg transition-all shadow-sm hover:shadow-md flex items-center gap-1.5"
+                  >
+                    <Bot className="w-4 h-4" />
+                    Aria AI
                   </Link>
                   <Link
                     to="/patient/queue"
@@ -257,6 +266,15 @@ export const Navbar: React.FC = () => {
                     className="block px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-lg"
                   >
                     Book Digital Token
+                  </Link>
+                  {/* Aria AI — highlighted in mobile too */}
+                  <Link
+                    to="/patient/book-appointment"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-brand-600 to-cyan-500 rounded-xl shadow-sm"
+                  >
+                    <Bot className="w-4 h-4" />
+                    Aria AI — Multilingual Assistant
                   </Link>
                   <Link
                     to="/patient/queue"
