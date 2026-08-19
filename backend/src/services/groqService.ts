@@ -61,8 +61,8 @@ function extractJSON(raw: string): any | null {
 export class GroqService {
 
   /**
-   * PHASE 1 — Pure conversation. NO doctor list. Tiny prompt, fast model.
-   * Responds in the patient's chosen language.
+   * PHASE 1 — Single-turn triage. Ask problem → immediately ready.
+   * NO follow-up questions. Extracts the complaint and sets ready=true right away.
    */
   private async conversationPhase(messages: ChatMessage[], language: string = 'English'): Promise<{
     ready: boolean;
@@ -70,70 +70,98 @@ export class GroqService {
     triage?: any;
     quick_replies?: string[];
   }> {
-    // COMPACT system prompt — no doctor list, no huge JSON blocks
-    const systemPrompt = `You are Aria, a friendly health assistant at SmartQueue clinic. Talk like a real human — warm, natural, caring. Never robotic.
+    const userMessages = messages.filter(m => m.role === 'user');
+    const lastUserMsg = userMessages[userMessages.length - 1]?.content?.toLowerCase() || '';
 
-IMPORTANT: The patient is communicating in ${language}. You MUST reply ONLY in ${language}. Do NOT reply in English unless the patient writes in English. Match the patient's language exactly.
+    // If this is just a greeting (no health complaint) — respond warmly and ask the one question
+    const greetingWords = ['hi', 'hello', 'hey', 'hola', 'namaste', 'vanakkam', 'salam', 'नमस्ते', 'হ্যালো', 'ਸਤ ਸ੍ਰੀ ਅਕਾਲ'];
+    const isJustGreeting = userMessages.length === 1 && greetingWords.some(g => lastUserMsg.includes(g)) && lastUserMsg.length < 20;
 
-BEHAVIOR:
-- Respond naturally to ANYTHING the patient says (greetings, jokes, off-topic, medical concerns)
-- "hi/hello" → warm greeting in ${language}, ask what's bothering them today
-- Off-topic questions → answer naturally in ${language} then gently ask about their health
-- Medical complaint → ask follow-up questions naturally in ${language}, 1-2 at a time
-- Never repeat the same message twice
-- Never list questions like a form
+    if (isJustGreeting) {
+      // Return language-appropriate one-question greeting
+      const greetingByLang: Record<string, string> = {
+        'Hindi': '👋 नमस्ते! मैं Aria हूँ। आज आपको क्या तकलीफ है?',
+        'Tamil': '👋 வணக்கம்! நான் Aria. இன்று உங்களுக்கு என்ன பிரச்சனை?',
+        'Telugu': '👋 నమస్కారం! నేను Aria. ఈ రోజు మీకు ఏమి అసౌకర్యంగా ఉంది?',
+        'Bengali': '👋 নমস্কার! আমি Aria। আজ আপনার কী সমস্যা?',
+        'Marathi': '👋 नमस्कार! मी Aria आहे। आज तुम्हाला काय त्रास होतोय?',
+        'Gujarati': '👋 નમસ્તે! હું Aria છું. આજે તમને શું તકલીફ છે?',
+        'Kannada': '👋 ನಮಸ್ಕಾರ! ನಾನು Aria. ಇಂದು ನಿಮಗೆ ಏನು ತೊಂದರೆ?',
+        'Punjabi': '👋 ਸਤ ਸ੍ਰੀ ਅਕਾਲ! ਮੈਂ Aria ਹਾਂ। ਅੱਜ ਤੁਹਾਨੂੰ ਕੀ ਸਮੱਸਿਆ ਹੈ?',
+        'English': "👋 Hi there! I'm Aria. What health problem are you facing today?",
+      };
+      return {
+        ready: false,
+        message: greetingByLang[language] || greetingByLang['English'],
+        quick_replies: [],
+      };
+    }
 
-GOAL: Understand their health problem naturally. Gather: what's wrong, since when, how bad (1-10), any other symptoms. Once you have chief complaint + duration + severity + 1 associated symptom, set ready=true.
+    // User has described their problem — extract triage and IMMEDIATELY mark ready
+    const systemPrompt = `You are a medical triage AI. The patient just described their health problem in ONE message. 
+    
+Extract the key clinical info and IMMEDIATELY respond with ready=true. Do NOT ask follow-up questions.
+Language to respond in: ${language}
 
-EMERGENCY: If they describe chest pain spreading to arm, sudden weakness, can't breathe, worst headache ever → tell them to call 112/911 immediately.
+EMERGENCY RULE: If they describe chest pain + arm pain, sudden loss of consciousness, severe breathing difficulty → urgency = EMERGENCY, message should say call 112 immediately.
 
-RESPOND WITH JSON in a code block:
+Extract from their message:
+- chief_complaint: what they said (in English for clinical use)
+- specialization: the medical specialty needed (e.g. "Cardiology", "General Medicine", "Orthopedics", "Dermatology", "ENT")
+- urgency: NORMAL | PRIORITY | EMERGENCY
+
+Respond with JSON code block:
 \`\`\`json
 {
-  "message": "your natural human reply in ${language}",
-  "ready": false,
+  "message": "Brief empathetic acknowledgment in ${language} + 'Finding the best doctor for you...' (in ${language})",
+  "ready": true,
   "triage": {
-    "specialization": "specialty needed or null",
+    "specialization": "specialty in English",
     "urgency": "NORMAL",
-    "chief_complaint": "what they said",
-    "duration": "since when",
-    "severity": "mild/moderate/severe or null",
-    "notes": "brief clinical note"
+    "chief_complaint": "complaint in English",
+    "severity": "mild/moderate/severe",
+    "notes": "1 line clinical note"
   },
-  "quick_replies": ["option1 in ${language}", "option2 in ${language}"]
+  "quick_replies": []
 }
-\`\`\`
-Set ready=true only when you have enough info to recommend a doctor. quick_replies can be [] if not needed.`;
+\`\`\``;
 
     const payload: Groq.Chat.ChatCompletionMessageParam[] = [
       { role: 'system', content: systemPrompt },
-      ...messages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
+      { role: 'user', content: userMessages[userMessages.length - 1]?.content || '' },
     ];
 
     const completion = await groq.chat.completions.create({
-      model: 'openai/gpt-oss-20b',  // smaller/faster model, ~4x lower token cost
+      model: 'openai/gpt-oss-20b',
       messages: payload,
-      temperature: 0.8,
-      max_tokens: 500,
+      temperature: 0.3,
+      max_tokens: 400,
     });
 
     const raw = completion.choices[0]?.message?.content || '';
     const parsed = extractJSON(raw);
 
     if (!parsed) {
-      // Model replied in plain text — use it directly
+      // Couldn't parse — assume general complaint and force ready
       return {
-        ready: false,
-        message: raw.trim() || "Could you tell me more about what you're feeling?",
+        ready: true,
+        message: raw.trim() || 'Finding the best doctor for you...',
+        triage: {
+          specialization: 'General Medicine',
+          urgency: 'NORMAL',
+          chief_complaint: userMessages[userMessages.length - 1]?.content || 'General consultation',
+          severity: 'moderate',
+          notes: '',
+        },
         quick_replies: [],
       };
     }
 
     return {
-      ready: !!parsed.ready,
-      message: parsed.message || "Tell me more — what's been bothering you?",
+      ready: true, // ALWAYS ready after first complaint message
+      message: parsed.message || 'Finding the best doctor for you...',
       triage: parsed.triage,
-      quick_replies: parsed.quick_replies || [],
+      quick_replies: [],
     };
   }
 
