@@ -63,7 +63,7 @@ export const AppointmentsPage: React.FC = () => {
         </div>
 
         <Link
-          to="/patient/book-appointment"
+          to="/patient/book-token"
           className="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl shadow-md transition-all text-xs flex items-center justify-center gap-1.5"
         >
           <Plus className="w-4 h-4" /> Book New Token
@@ -94,7 +94,7 @@ export const AppointmentsPage: React.FC = () => {
             <Calendar className="w-12 h-12 text-slate-300 mx-auto" />
             <p className="font-bold text-slate-700">No appointments found in this category.</p>
             <Link
-              to="/patient/book-appointment"
+              to="/patient/book-token"
               className="inline-flex items-center gap-1 text-xs font-bold text-brand-600 hover:underline"
             >
               Book a new appointment &rarr;

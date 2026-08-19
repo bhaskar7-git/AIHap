@@ -147,7 +147,7 @@ export const DoctorsPage: React.FC = () => {
                   Live Queue
                 </Link>
                 <Link
-                  to="/patient/book-appointment"
+                  to="/patient/book-token"
                   className="flex-1 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1 shadow-sm hover:shadow transition-all"
                 >
                   <Sparkles className="w-3.5 h-3.5" /> Book Token

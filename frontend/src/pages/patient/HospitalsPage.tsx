@@ -94,7 +94,7 @@ export const HospitalsPage: React.FC = () => {
                 <Stethoscope className="w-3.5 h-3.5" /> View Doctors
               </Link>
               <Link
-                to={`/patient/book-appointment`}
+                to={`/patient/book-token`}
                 className="py-2.5 px-4 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl text-xs flex items-center justify-center transition-colors"
               >
                 Book

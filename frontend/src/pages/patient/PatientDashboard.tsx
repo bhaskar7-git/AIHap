@@ -151,7 +151,7 @@ export const PatientDashboard: React.FC = () => {
           </button>
 
           <Link
-            to="/patient/book-appointment"
+            to="/patient/book-token"
             className="px-5 py-3 bg-white hover:bg-slate-50 text-brand-800 font-bold rounded-2xl shadow-lg transition-all flex items-center gap-2 text-sm"
           >
             <Plus className="w-4 h-4" /> Book New Token
@@ -271,11 +271,11 @@ export const PatientDashboard: React.FC = () => {
             </p>
           </div>
           <Link
-            to="/patient/book-appointment"
+            to="/patient/book-token"
             className="inline-flex items-center gap-2 px-6 py-3 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-2xl shadow-md transition-all text-sm"
           >
             <Sparkles className="w-4 h-4" />
-            Book Digital Appointment
+            Book Digital Token
           </Link>
         </div>
       )}
