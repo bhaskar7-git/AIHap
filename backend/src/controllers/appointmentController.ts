@@ -171,7 +171,13 @@ export const getAppointments = async (req: AuthRequest, res: Response): Promise<
     }
 
     if (req.user.role === 'DOCTOR') {
-      const appts = await store.getAppointmentsByDoctor(req.user.id);
+      // req.user.id is the auth user_id — must resolve to doctors.id
+      const doctorProfile = await store.getDoctorById(req.user.id);
+      if (!doctorProfile) {
+        res.status(404).json({ success: false, message: 'Doctor profile not found. Please complete your profile setup.' });
+        return;
+      }
+      const appts = await store.getAppointmentsByDoctor(doctorProfile.id);
       res.status(200).json({ success: true, count: appts.length, data: appts });
       return;
     }
