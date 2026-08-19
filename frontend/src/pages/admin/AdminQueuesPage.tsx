@@ -117,18 +117,25 @@ export const AdminQueuesPage: React.FC = () => {
                       <span className="text-xs text-slate-400 italic">No patients in line</span>
                     ) : (
                       q?.tokens.filter(t => t.status === 'WAITING').map((t) => (
-                        <span
+                        <button
                           key={t.id}
-                          className={`px-2 py-1 rounded-lg text-xs font-mono font-bold ${
+                          onClick={async () => {
+                            if (window.confirm(`🚨 Admin Emergency Override: Swap Token ${t.token_number} directly into ${doc.user_name}'s room?`)) {
+                              await queueApi.emergencySwap(doc.id, t.id);
+                              fetchAllQueues();
+                            }
+                          }}
+                          title="Click to Emergency Swap into Room"
+                          className={`px-2 py-1 rounded-lg text-xs font-mono font-bold transition-transform hover:scale-110 cursor-pointer ${
                             t.priority === 'EMERGENCY'
-                              ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                              ? 'bg-rose-100 text-rose-800 border border-rose-300 ring-2 ring-rose-400'
                               : t.priority === 'PRIORITY'
                               ? 'bg-amber-100 text-amber-800 border border-amber-300'
-                              : 'bg-slate-100 text-slate-700'
+                              : 'bg-slate-100 text-slate-700 hover:bg-rose-50 hover:text-rose-700'
                           }`}
                         >
                           {t.token_number}
-                        </span>
+                        </button>
                       ))
                     )}
                   </div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import {
   Clock,
@@ -9,13 +9,11 @@ import {
   AlertCircle,
   CheckCircle2,
   AlertTriangle,
-  ShieldCheck,
-  MapPinCheckInside,
-  ClipboardList
+  ArrowRight,
+  ShieldCheck
 } from 'lucide-react';
 import { Token, Appointment } from '../../types/index.js';
 import { StatusBadge } from '../common/StatusBadge.js';
-import { queueApi } from '../../services/api.js';
 
 interface TokenCardProps {
   token: Token;
@@ -23,7 +21,6 @@ interface TokenCardProps {
   currentTokenNumber?: string;
   patientsAhead?: number;
   onCancel?: () => void;
-  onArrived?: () => void;
 }
 
 export const TokenCard: React.FC<TokenCardProps> = ({
@@ -32,33 +29,12 @@ export const TokenCard: React.FC<TokenCardProps> = ({
   currentTokenNumber = 'A-21',
   patientsAhead = 0,
   onCancel,
-  onArrived,
 }) => {
-  const [checkingIn, setCheckingIn] = useState(false);
-  const [checkinSuccess, setCheckinSuccess] = useState<string | null>(token.arrived_at || null);
-  const [checkinError, setCheckinError] = useState<string>('');
-
   const isCalled = token.status === 'CALLED';
   const isInConsultation = token.status === 'IN_CONSULTATION';
   const isCompleted = token.status === 'COMPLETED';
   const isCancelled = token.status === 'CANCELLED';
   const isNoShow = token.status === 'NO_SHOW';
-
-  const handleArrivalCheckin = async () => {
-    setCheckingIn(true);
-    setCheckinError('');
-    try {
-      const res = await queueApi.patientArrival(token.id);
-      if (res.data.success) {
-        setCheckinSuccess(new Date().toISOString());
-        if (onArrived) onArrived();
-      }
-    } catch (err: any) {
-      setCheckinError(err?.response?.data?.message || 'Check-in failed. Please try again.');
-    } finally {
-      setCheckingIn(false);
-    }
-  };
 
   // Determine status color and banner message
   let bannerBg = 'bg-emerald-50 border-emerald-200 text-emerald-900';
@@ -91,12 +67,6 @@ export const TokenCard: React.FC<TokenCardProps> = ({
   // Generate a real, scannable URL — points to live queue for this appointment
   const baseUrl = window.location.origin;
   const qrData = `${baseUrl}/patient/queue?doctor=${token.doctor_id || ''}&token=${token.id}&t=${token.token_number}`;
-
-  const preVisitChecklist: string[] = (appointment?.ai_summary as any)?.pre_visit_checklist || [
-    'Bring prior medical records, prescriptions, or blood test reports',
-    'Keep a note of fever onset time or key symptom progression',
-    'Arrive at the clinic lobby 10 minutes prior to your slot'
-  ];
 
   return (
     <div className="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden transition-all hover:shadow-2xl">
@@ -133,52 +103,6 @@ export const TokenCard: React.FC<TokenCardProps> = ({
             <StatusBadge status={token.status} />
           </div>
         </div>
-
-        {/* Patient Arrival Check-In Action Section */}
-        {token.status === 'WAITING' && (
-          <div className="my-5 p-4 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0">
-                <MapPinCheckInside className="w-5 h-5" />
-              </div>
-              <div>
-                <h5 className="font-extrabold text-sm text-slate-900">
-                  {checkinSuccess || token.arrived_at ? "Checked In at Clinic" : "Arrived at the Hospital?"}
-                </h5>
-                <p className="text-xs text-slate-600">
-                  {checkinSuccess || token.arrived_at
-                    ? "Doctors can see that you are physically present in the waiting room."
-                    : "Tap 'I've Arrived' when you reach the waiting lobby so the doctor knows you are ready."}
-                </p>
-              </div>
-            </div>
-
-            {checkinSuccess || token.arrived_at ? (
-              <span className="px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-extrabold flex items-center gap-1.5 shadow-sm flex-shrink-0">
-                <CheckCircle2 className="w-4 h-4" /> 🟢 Checked In
-              </span>
-            ) : (
-              <button
-                onClick={handleArrivalCheckin}
-                disabled={checkingIn}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow-md hover:shadow-lg transition-all flex-shrink-0"
-              >
-                {checkingIn ? (
-                  <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <MapPinCheckInside className="w-4 h-4" />
-                )}
-                I've Arrived at Clinic
-              </button>
-            )}
-          </div>
-        )}
-
-        {checkinError && (
-          <div className="mb-4 px-4 py-2 bg-rose-50 border border-rose-200 rounded-xl text-xs font-semibold text-rose-700">
-            {checkinError}
-          </div>
-        )}
 
         {/* Core Live Token Highlights */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 my-6">
@@ -225,24 +149,6 @@ export const TokenCard: React.FC<TokenCardProps> = ({
           </div>
         </div>
 
-        {/* AI Pre-Visit Checklist */}
-        {preVisitChecklist.length > 0 && (
-          <div className="my-5 p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
-            <h5 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-              <ClipboardList className="w-4 h-4 text-brand-600" />
-              AI Pre-Consultation Checklist
-            </h5>
-            <ul className="space-y-1.5 text-xs text-slate-600">
-              {preVisitChecklist.map((item, idx) => (
-                <li key={idx} className="flex items-start gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-brand-500 mt-1.5 flex-shrink-0" />
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
         {/* QR Code & Appointment Details Bottom Row */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-4 border-t border-slate-100">
           <div className="space-y-1.5 text-xs text-slate-600 w-full sm:w-auto">
@@ -280,4 +186,3 @@ export const TokenCard: React.FC<TokenCardProps> = ({
     </div>
   );
 };
-

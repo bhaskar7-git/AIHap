@@ -85,9 +85,6 @@ export interface Token {
   created_at: string;
   called_at?: string | null;
   completed_at?: string | null;
-  arrived_at?: string | null;
-  predicted_duration?: number;
-  checkin_deadline?: string | null;
   patient_name?: string;
   patient_phone?: string;
   doctor_id?: string;
@@ -113,7 +110,6 @@ export interface QueueState {
   doctor: Doctor;
   currentToken: Token | null;
   waitingCount: number;
-  arrivedCount?: number;
   completedCount: number;
   noShowCount: number;
   totalToday: number;

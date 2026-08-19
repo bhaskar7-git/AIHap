@@ -115,8 +115,6 @@ export interface TriageResponse {
     onset_and_duration?: string;
     duration?: string;
     severity?: string;
-    predicted_duration?: number;
-    pre_visit_checklist?: string[];
     pain_characteristics?: string;
     notes?: string;
   };
@@ -175,9 +173,6 @@ export const queueApi = {
   getDoctorQueue: (doctorId: string, date?: string) =>
     api.get<{ success: boolean; data: QueueState }>(`/queue/${doctorId}`, { params: { date } }),
 
-  patientArrival: (tokenId: string) =>
-    api.post<{ success: boolean; data: { token: Token; queueState: QueueState }; message: string }>(`/queue/arrive/${tokenId}`),
-
   callNext: (doctorId: string) =>
     api.post<{ success: boolean; data: { calledToken: Token | null; queueState: QueueState }; message: string }>(`/queue/${doctorId}/call-next`),
 
@@ -192,6 +187,21 @@ export const queueApi = {
 
   setPriority: (tokenId: string, priority: 'NORMAL' | 'PRIORITY' | 'EMERGENCY') =>
     api.post<{ success: boolean; data: { token: Token; queueState: QueueState } }>(`/queue/priority/${tokenId}`, { priority }),
+
+  emergencySwap: (doctorId: string, tokenId: string) =>
+    api.post<{
+      success: boolean;
+      message: string;
+      data: {
+        emergencyToken: Token;
+        previousToken: Token | null;
+        queueState: QueueState;
+        message: string;
+      };
+    }>(`/queue/${doctorId}/emergency-swap/${tokenId}`),
+
+  patientArrival: (tokenId: string) =>
+    api.post<{ success: boolean; message: string; data: { token: Token | null; queueState: QueueState } }>(`/queue/arrive/${tokenId}`),
 };
 
 // --- Admin APIs ---

@@ -7,6 +7,7 @@ import {
   markNoShow,
   setTokenPriority,
   patientArrival,
+  emergencySwap,
 } from '../controllers/queueController.js';
 import { authenticateToken, authorizeRoles } from '../middleware/auth.js';
 
@@ -17,6 +18,11 @@ router.get('/:doctorId', getDoctorQueue);
 
 // Patient check-in "I'm Here" (15 min window from appointment time)
 router.post('/arrive/:tokenId', authenticateToken, authorizeRoles('PATIENT', 'ADMIN'), patientArrival);
+
+// Emergency Priority Swap: Swap emergency patient immediately into active room slot
+router.post('/:doctorId/emergency-swap/:tokenId', authenticateToken, authorizeRoles('DOCTOR', 'ADMIN'), emergencySwap);
+router.post('/:doctorId/emergency-swap', authenticateToken, authorizeRoles('DOCTOR', 'ADMIN'), emergencySwap);
+router.post('/emergency-swap/:tokenId', authenticateToken, authorizeRoles('DOCTOR', 'ADMIN'), emergencySwap);
 
 // Protected actions for Doctor & Admin
 router.post('/:doctorId/call-next', authenticateToken, authorizeRoles('DOCTOR', 'ADMIN'), callNextPatient);

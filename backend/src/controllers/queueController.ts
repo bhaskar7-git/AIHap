@@ -96,6 +96,29 @@ export const setTokenPriority = async (req: AuthRequest, res: Response): Promise
   }
 };
 
+/** Emergency Priority Swap */
+export const emergencySwap = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { doctorId, tokenId } = req.params;
+    const targetDoctorId = (doctorId || req.body.doctorId) as string;
+    const targetTokenId = (tokenId || req.body.tokenId) as string;
+
+    if (!targetDoctorId || !targetTokenId) {
+      res.status(400).json({ success: false, message: 'Doctor ID and Emergency Token ID are required' });
+      return;
+    }
+
+    const result = await queueService.emergencySwap(targetDoctorId, targetTokenId);
+    res.status(200).json({
+      success: true,
+      message: result.message,
+      data: result,
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 /** Patient checks in "I'm Here" for their token */
 export const patientArrival = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -111,8 +134,9 @@ export const patientArrival = async (req: AuthRequest, res: Response): Promise<v
       data: result,
     });
   } catch (error: any) {
-    // 400 for business logic errors (expired, wrong status), 500 for others
-    const status = error.message.includes('expired') || error.message.includes('only check in') ? 400 : 500;
+    const status = error.message?.includes('expired') || error.message?.includes('only check in') ? 400 : 500;
     res.status(status).json({ success: false, message: error.message });
   }
 };
+
+

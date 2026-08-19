@@ -138,6 +138,21 @@ export const DoctorQueuePage: React.FC = () => {
                 <span>Queue Pos: #{idx + 1}</span>
                 <span className="font-mono font-bold text-brand-700">~{tok.estimated_wait} min</span>
               </div>
+              <button
+                onClick={async () => {
+                  if (window.confirm(`🚨 Execute Emergency Swap for Token ${tok.token_number}? This will immediately call this patient into Room 204.`)) {
+                    try {
+                      await queueApi.emergencySwap(doctorId, tok.id);
+                      fetchQueue();
+                    } catch (err: any) {
+                      alert(err.response?.data?.message || 'Error executing emergency swap');
+                    }
+                  }
+                }}
+                className="w-full mt-2 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-sm transition-colors"
+              >
+                🚨 Emergency Swap Now
+              </button>
             </div>
           ))}
         </div>

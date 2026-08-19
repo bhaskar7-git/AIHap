@@ -420,12 +420,120 @@ export class QueueService {
 
     const doctorId = token.doctor_id || (appt ? appt.doctor_id : '');
     const today = token.appointment_date || new Date().toISOString().split('T')[0];
-    const queueState = await this.calculateAndRecalculateQueue(doctorId, today);
 
+    // If marked as EMERGENCY, execute immediate emergency swap into serving slot
+    if (priority === 'EMERGENCY' && doctorId) {
+      const swapRes = await this.emergencySwap(doctorId, tokenId);
+      return { token: swapRes.emergencyToken, queueState: swapRes.queueState };
+    }
+
+    const queueState = await this.calculateAndRecalculateQueue(doctorId, today);
     socketService.emitQueueUpdate(doctorId, queueState);
 
     const updatedToken = await store.getTokenById(tokenId);
     return { token: updatedToken!, queueState };
+  }
+
+  /**
+   * Emergency Priority Swap:
+   * Instantly swaps the emergency token into the active serving slot (CALLED/Room 204),
+   * putting any current patient on hold at the top of the waiting line.
+   */
+  public async emergencySwap(doctorId: string, emergencyTokenId: string): Promise<{
+    emergencyToken: Token;
+    previousToken: Token | null;
+    queueState: QueueState;
+    message: string;
+  }> {
+    const today = new Date().toISOString().split('T')[0];
+    const emToken = await store.getTokenById(emergencyTokenId);
+    if (!emToken) throw new Error('Emergency token not found');
+
+    const queueBefore = await this.calculateAndRecalculateQueue(doctorId, today);
+    const currentToken = queueBefore.currentToken;
+    const nowIso = new Date().toISOString();
+
+    let previousToken: Token | null = null;
+
+    // If there is an active current token (not the same token), swap it back to top of WAITING queue
+    if (currentToken && currentToken.id !== emergencyTokenId) {
+      previousToken = currentToken;
+      await store.updateToken(currentToken.id, {
+        status: 'WAITING',
+        priority: 'PRIORITY', // Give previous patient priority so they remain #1 after emergency
+        called_at: null,
+      });
+      await store.updateAppointment(currentToken.appointment_id, { status: 'WAITING' });
+      await store.logQueueEvent({
+        id: uuidv4(),
+        token_id: currentToken.id,
+        event_type: 'PREEMPTED_FOR_EMERGENCY',
+        created_at: nowIso,
+      });
+
+      // Notify the paused/displaced patient
+      const prevAppt = await store.getAppointmentById(currentToken.appointment_id);
+      if (prevAppt) {
+        const notif = await notificationService.notifyUser(
+          prevAppt.patient_id,
+          '⚠️ Emergency Consultation Hold',
+          `Token ${currentToken.token_number}: Your consultation is temporarily paused for an urgent medical emergency. You are #1 priority in line and will be called immediately after.`,
+          'ALERT',
+          prevAppt.patient_phone
+        );
+        socketService.emitNotification(prevAppt.patient_id, notif);
+      }
+    }
+
+    // Now elevate and immediately call the emergency token
+    await store.updateToken(emergencyTokenId, {
+      status: 'CALLED',
+      priority: 'EMERGENCY',
+      called_at: nowIso,
+      estimated_wait: 0,
+    });
+    await store.updateAppointment(emToken.appointment_id, { status: 'CALLED' });
+    await store.logQueueEvent({
+      id: uuidv4(),
+      token_id: emergencyTokenId,
+      event_type: 'EMERGENCY_SWAP',
+      created_at: nowIso,
+    });
+
+    // Notify the emergency patient immediately
+    const emAppt = await store.getAppointmentById(emToken.appointment_id);
+    const room = emToken.room_number || 'Room 204';
+    if (emAppt) {
+      const urgentNotif = await notificationService.notifyUser(
+        emAppt.patient_id,
+        '🚨 EMERGENCY ROOM CALL',
+        `EMERGENCY ADMISSION: Token ${emToken.token_number} — Please enter ${room} immediately. Doctor is prepped for emergency care.`,
+        'URGENT',
+        emAppt.patient_phone
+      );
+      socketService.emitNotification(emAppt.patient_id, urgentNotif);
+      socketService.emitTokenStatus(emAppt.patient_id, {
+        token: emToken,
+        status: 'CALLED',
+        message: `EMERGENCY: Proceed to ${room} immediately`,
+      });
+    }
+
+    // Recalculate queue waiting times for all patients
+    const queueState = await this.calculateAndRecalculateQueue(doctorId, today);
+    socketService.emitQueueUpdate(doctorId, queueState);
+
+    const updatedEmToken = await store.getTokenById(emergencyTokenId);
+    const msg = previousToken
+      ? `🚨 Emergency Swapped! Token ${updatedEmToken?.token_number} is now in ${room}. Token ${previousToken.token_number} moved to #1 waiting position.`
+      : `🚨 Emergency Activated! Token ${updatedEmToken?.token_number} called to ${room}.`;
+
+    return {
+      emergencyToken: updatedEmToken!,
+      previousToken,
+      queueState,
+      message: msg,
+    };
   }
   /**
    * Patient checks in: "I'm Here" — marks arrived_at and bumps them up in queue
