@@ -132,12 +132,14 @@ export const aiApi = {
   chatTriage: (
     messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>,
     preferredDate?: string,
-    preferredTime?: string
+    preferredTime?: string,
+    language?: string
   ) =>
     api.post<{ success: boolean; data: TriageResponse }>('/ai/chat-triage', {
       messages,
       preferredDate,
       preferredTime,
+      language,   // locale code e.g. "hi-IN", "ta-IN" — backend maps to language name
     }),
 };
 

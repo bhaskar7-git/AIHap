@@ -221,7 +221,7 @@ export const BookAppointmentPage: React.FC = () => {
           content: m.content,
         }));
 
-      const res = await aiApi.chatTriage(apiPayload, preferredDate, preferredTime);
+      const res = await aiApi.chatTriage(apiPayload, preferredDate, preferredTime, voiceLang);
 
       if (res.data.success) {
         const aiData = res.data.data;

@@ -62,9 +62,9 @@ export class GroqService {
 
   /**
    * PHASE 1 — Pure conversation. NO doctor list. Tiny prompt, fast model.
-   * Returns {ready: false, parsed} or {ready: true, triage} when enough info gathered.
+   * Responds in the patient's chosen language.
    */
-  private async conversationPhase(messages: ChatMessage[]): Promise<{
+  private async conversationPhase(messages: ChatMessage[], language: string = 'English'): Promise<{
     ready: boolean;
     message: string;
     triage?: any;
@@ -73,11 +73,13 @@ export class GroqService {
     // COMPACT system prompt — no doctor list, no huge JSON blocks
     const systemPrompt = `You are Aria, a friendly health assistant at SmartQueue clinic. Talk like a real human — warm, natural, caring. Never robotic.
 
+IMPORTANT: The patient is communicating in ${language}. You MUST reply ONLY in ${language}. Do NOT reply in English unless the patient writes in English. Match the patient's language exactly.
+
 BEHAVIOR:
 - Respond naturally to ANYTHING the patient says (greetings, jokes, off-topic, medical concerns)
-- "hi/hello" → warm greeting, ask what's bothering them today
-- Off-topic questions (where are you from, what's your name, etc.) → answer naturally then gently ask about their health
-- Medical complaint → ask follow-up questions naturally, 1-2 at a time
+- "hi/hello" → warm greeting in ${language}, ask what's bothering them today
+- Off-topic questions → answer naturally in ${language} then gently ask about their health
+- Medical complaint → ask follow-up questions naturally in ${language}, 1-2 at a time
 - Never repeat the same message twice
 - Never list questions like a form
 
@@ -88,7 +90,7 @@ EMERGENCY: If they describe chest pain spreading to arm, sudden weakness, can't 
 RESPOND WITH JSON in a code block:
 \`\`\`json
 {
-  "message": "your natural human reply",
+  "message": "your natural human reply in ${language}",
   "ready": false,
   "triage": {
     "specialization": "specialty needed or null",
@@ -98,7 +100,7 @@ RESPOND WITH JSON in a code block:
     "severity": "mild/moderate/severe or null",
     "notes": "brief clinical note"
   },
-  "quick_replies": ["option1", "option2"]
+  "quick_replies": ["option1 in ${language}", "option2 in ${language}"]
 }
 \`\`\`
 Set ready=true only when you have enough info to recommend a doctor. quick_replies can be [] if not needed.`;
@@ -137,12 +139,12 @@ Set ready=true only when you have enough info to recommend a doctor. quick_repli
 
   /**
    * PHASE 2 — Doctor matching. Only called when patient info is complete.
-   * Sends compact doctor list and triage summary to match best doctors.
    */
   private async matchDoctorsPhase(
     triage: any,
     preferredDate?: string,
-    preferredTime?: string
+    preferredTime?: string,
+    language: string = 'English'
   ): Promise<{
     message: string;
     recommended_doctor_ids: string[];
@@ -175,6 +177,8 @@ Set ready=true only when you have enough info to recommend a doctor. quick_repli
 
     const systemPrompt = `You are a doctor-matching AI. Given a patient's triage, pick the 3 best-fit doctors from the list. Prefer doctors with lower queue wait (wait field). If urgency is EMERGENCY/PRIORITY, pick fastest available.
 
+IMPORTANT: Reply in ${language}. The "message" field must be in ${language}. The "quick_replies" must also be in ${language}.
+
 Patient triage:
 ${JSON.stringify(triage, null, 2)}
 
@@ -186,7 +190,7 @@ Date: ${preferredDate || 'Today'} | Time: ${preferredTime || 'Upcoming'}
 Respond with JSON in code block:
 \`\`\`json
 {
-  "message": "Warm recommendation message to patient",
+  "message": "Warm recommendation message to patient in ${language}",
   "doctor_ids": ["id1", "id2", "id3"],
   "interim_relief": null,
   "quick_replies": ["Book top doctor", "See more options"]
@@ -218,11 +222,12 @@ If patient has pain/fever and appointment is upcoming, populate interim_relief w
   public async analyzeAndTriage(
     messages: ChatMessage[],
     preferredDate?: string,
-    preferredTime?: string
+    preferredTime?: string,
+    language: string = 'English'
   ): Promise<TriageResult> {
     try {
-      // PHASE 1: Have a natural conversation to gather symptoms
-      const conv = await this.conversationPhase(messages);
+      // PHASE 1: Have a natural conversation in the patient's language
+      const conv = await this.conversationPhase(messages, language);
 
       if (!conv.ready) {
         // Still gathering info — return conversation response
@@ -238,8 +243,8 @@ If patient has pain/fever and appointment is upcoming, populate interim_relief w
         };
       }
 
-      // PHASE 2: Enough info — match doctors
-      const match = await this.matchDoctorsPhase(conv.triage, preferredDate, preferredTime);
+      // PHASE 2: Enough info — match doctors (still in same language)
+      const match = await this.matchDoctorsPhase(conv.triage, preferredDate, preferredTime, language);
       const doctors = await store.getAllDoctors();
 
       const matchedDoctors = match.recommended_doctor_ids
