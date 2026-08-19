@@ -120,11 +120,15 @@ export const createAppointment = async (req: AuthRequest, res: Response): Promis
       created_at: new Date().toISOString(),
     });
 
-    // Recalculate queue wait times
-    const queueState = await queueService.calculateAndRecalculateQueue(doctor_id, appointment_date);
-    
-    // Broadcast live queue update
-    socketService.emitQueueUpdate(doctor_id, queueState);
+    // If priority is EMERGENCY, automatically execute immediate Emergency Swap into the doctor room
+    if (priority === 'EMERGENCY') {
+      await queueService.emergencySwap(doctor_id, tokenId);
+    } else {
+      // Recalculate queue wait times
+      const queueState = await queueService.calculateAndRecalculateQueue(doctor_id, appointment_date);
+      // Broadcast live queue update
+      socketService.emitQueueUpdate(doctor_id, queueState);
+    }
 
     // Find the created token with updated waiting time
     const updatedToken = await store.getTokenById(tokenId);

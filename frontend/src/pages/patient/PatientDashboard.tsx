@@ -12,7 +12,8 @@ import {
   ArrowRight,
   ShieldCheck,
   RefreshCw,
-  Bell
+  Bell,
+  Zap
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.js';
 import { useSocket } from '../../context/SocketContext.js';
@@ -149,6 +150,13 @@ export const PatientDashboard: React.FC = () => {
           >
             <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
           </button>
+
+          <Link
+            to="/patient/book-token"
+            className="px-4 py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-2xl shadow-lg transition-all flex items-center gap-2 text-sm ring-2 ring-rose-400 animate-pulse"
+          >
+            <Zap className="w-4 h-4" /> 🚨 Emergency Token
+          </Link>
 
           <Link
             to="/patient/book-token"

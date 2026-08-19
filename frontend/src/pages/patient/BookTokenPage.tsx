@@ -30,6 +30,7 @@ export const BookTokenPage: React.FC = () => {
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [bookingDate, setBookingDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [bookingTime, setBookingTime] = useState<string>('10:00 AM');
+  const [isEmergency, setIsEmergency] = useState<boolean>(false);
   const [booking, setBooking] = useState(false);
   const [bookingError, setBookingError] = useState<string>('');
 
@@ -58,8 +59,9 @@ export const BookTokenPage: React.FC = () => {
     );
   });
 
-  const openBookingModal = (doc: Doctor) => {
+  const openBookingModal = (doc: Doctor, emergency: boolean = false) => {
     setSelectedDoctor(doc);
+    setIsEmergency(emergency);
     setBookingError('');
     setConfirmedToken(null);
     setBookingDate(new Date().toISOString().split('T')[0]);
@@ -70,6 +72,7 @@ export const BookTokenPage: React.FC = () => {
     setSelectedDoctor(null);
     setConfirmedToken(null);
     setBookingError('');
+    setIsEmergency(false);
   };
 
   const handleConfirmBooking = async () => {
@@ -81,8 +84,8 @@ export const BookTokenPage: React.FC = () => {
         doctor_id: selectedDoctor.id,
         appointment_date: bookingDate,
         appointment_time: bookingTime,
-        appointment_type: 'General Consultation',
-        priority: 'NORMAL',
+        appointment_type: isEmergency ? '🚨 EMERGENCY Fast-Track Triage' : 'General Consultation',
+        priority: isEmergency ? 'EMERGENCY' : 'NORMAL',
       });
       if (res.data.success) {
         setConfirmedToken(res.data.data);
@@ -339,6 +342,41 @@ export const BookTokenPage: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* Emergency Toggle Selector */}
+                  <div className="p-3.5 rounded-2xl border-2 transition-all space-y-2 bg-slate-50 border-slate-200">
+                    <span className="text-xs font-bold text-slate-700 block">Priority Level:</span>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsEmergency(false)}
+                        className={`py-2 px-3 rounded-xl text-xs font-bold transition-all border ${
+                          !isEmergency
+                            ? 'bg-brand-600 text-white border-brand-600 shadow-sm'
+                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                        }`}
+                      >
+                        Standard Booking
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsEmergency(true)}
+                        className={`py-2 px-3 rounded-xl text-xs font-bold transition-all border flex items-center justify-center gap-1 ${
+                          isEmergency
+                            ? 'bg-rose-600 text-white border-rose-600 shadow-md ring-2 ring-rose-400 animate-pulse'
+                            : 'bg-white text-rose-700 border-rose-200 hover:bg-rose-50'
+                        }`}
+                      >
+                        <Zap className="w-3 h-3" />
+                        🚨 EMERGENCY SWAP
+                      </button>
+                    </div>
+                    {isEmergency && (
+                      <p className="text-[11px] text-rose-700 font-semibold bg-rose-50 p-2 rounded-lg border border-rose-200">
+                        ⚡ <strong>Emergency Fast-Track:</strong> Instantly swaps you into Room 204. Any current patient will be paused to prioritize your care.
+                      </p>
+                    )}
+                  </div>
+
                   {/* Doctor quick info */}
                   <div className="bg-slate-50 rounded-2xl p-3 flex items-center justify-between text-xs text-slate-600">
                     <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-slate-400" /> Avg consult time</span>
@@ -355,12 +393,20 @@ export const BookTokenPage: React.FC = () => {
                   <button
                     onClick={handleConfirmBooking}
                     disabled={booking}
-                    className="w-full py-3.5 bg-brand-600 hover:bg-brand-700 disabled:opacity-60 text-white font-extrabold rounded-2xl shadow-lg transition-all text-sm flex items-center justify-center gap-2"
+                    className={`w-full py-3.5 disabled:opacity-60 text-white font-extrabold rounded-2xl shadow-lg transition-all text-sm flex items-center justify-center gap-2 ${
+                      isEmergency
+                        ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-500/30 ring-2 ring-rose-400'
+                        : 'bg-brand-600 hover:bg-brand-700'
+                    }`}
                   >
                     {booking ? (
                       <>
                         <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                        Booking your slot...
+                        {isEmergency ? 'Allocating Emergency Room 204...' : 'Booking your slot...'}
+                      </>
+                    ) : isEmergency ? (
+                      <>
+                        <Zap className="w-4 h-4" /> 🚨 Allocate Emergency Token & Swap Now
                       </>
                     ) : (
                       <>
@@ -374,18 +420,36 @@ export const BookTokenPage: React.FC = () => {
               /* ── STEP 2: Token Confirmed ── */
               <div className="p-6 space-y-5 text-center">
                 {/* Success Icon */}
-                <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto shadow-md">
-                  <CheckCircle2 className="w-9 h-9 text-emerald-500" />
+                <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto shadow-md ${
+                  confirmedToken.token?.priority === 'EMERGENCY' ? 'bg-rose-100 animate-bounce' : 'bg-emerald-100'
+                }`}>
+                  {confirmedToken.token?.priority === 'EMERGENCY' ? (
+                    <Zap className="w-9 h-9 text-rose-600" />
+                  ) : (
+                    <CheckCircle2 className="w-9 h-9 text-emerald-500" />
+                  )}
                 </div>
 
                 <div>
-                  <h2 className="text-xl font-extrabold text-slate-900">Booking Confirmed! 🎉</h2>
-                  <p className="text-sm text-slate-500 mt-1">Your token has been generated successfully.</p>
+                  <h2 className="text-xl font-extrabold text-slate-900">
+                    {confirmedToken.token?.priority === 'EMERGENCY' ? '🚨 EMERGENCY TOKEN ALLOCATED!' : 'Booking Confirmed! 🎉'}
+                  </h2>
+                  <p className="text-sm text-slate-500 mt-1">
+                    {confirmedToken.token?.priority === 'EMERGENCY'
+                      ? 'You have been swapped into Room 204 immediately. Proceed inside now.'
+                      : 'Your token has been generated successfully.'}
+                  </p>
                 </div>
 
                 {/* Big Token Number */}
-                <div className="bg-gradient-to-br from-brand-600 to-cyan-600 rounded-3xl p-6 text-white shadow-xl">
-                  <p className="text-white/70 text-xs uppercase tracking-widest font-bold mb-1">Your Token Number</p>
+                <div className={`rounded-3xl p-6 text-white shadow-xl ${
+                  confirmedToken.token?.priority === 'EMERGENCY'
+                    ? 'bg-gradient-to-br from-rose-600 via-rose-700 to-red-800 ring-4 ring-rose-400 animate-pulse'
+                    : 'bg-gradient-to-br from-brand-600 to-cyan-600'
+                }`}>
+                  <p className="text-white/80 text-xs uppercase tracking-widest font-bold mb-1">
+                    {confirmedToken.token?.priority === 'EMERGENCY' ? '🚨 Emergency Token (Room 204)' : 'Your Token Number'}
+                  </p>
                   <div className="text-6xl font-black font-mono tracking-tight">
                     {confirmedToken.token?.token_number ?? '—'}
                   </div>
@@ -405,16 +469,20 @@ export const BookTokenPage: React.FC = () => {
                     <strong className="text-slate-800">{selectedDoctor.user_name}</strong>
                   </div>
                   <div className="flex justify-between">
-                    <span>Date</span>
-                    <strong className="text-slate-800">{bookingDate}</strong>
+                    <span>Room</span>
+                    <strong className="text-rose-600 font-bold">Room 204 (Immediate)</strong>
                   </div>
                   <div className="flex justify-between">
-                    <span>Time Slot</span>
-                    <strong className="text-slate-800">{bookingTime}</strong>
+                    <span>Status</span>
+                    <strong className="text-rose-600 font-bold">
+                      {confirmedToken.token?.priority === 'EMERGENCY' ? '🚨 CALLED / IN SERVICE' : 'WAITING'}
+                    </strong>
                   </div>
                   <div className="flex justify-between">
                     <span>Est. Wait</span>
-                    <strong className="text-brand-700">~{confirmedToken.token?.estimated_wait ?? 10} min</strong>
+                    <strong className="text-brand-700">
+                      {confirmedToken.token?.priority === 'EMERGENCY' ? '0 min (IMMEDIATE ENTRY)' : `~${confirmedToken.token?.estimated_wait ?? 10} min`}
+                    </strong>
                   </div>
                 </div>
 
