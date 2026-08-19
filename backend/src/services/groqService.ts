@@ -30,6 +30,8 @@ export interface TriageResult {
     chief_complaint: string;
     onset_and_duration?: string;
     severity?: string;
+    predicted_duration?: number;
+    pre_visit_checklist?: string[];
     pain_characteristics?: string;
     notes?: string;
   };
@@ -99,7 +101,7 @@ export class GroqService {
 
     // User has described their problem — extract triage and IMMEDIATELY mark ready
     const systemPrompt = `You are a medical triage AI. The patient just described their health problem in ONE message. 
-    
+
 Extract the key clinical info and IMMEDIATELY respond with ready=true. Do NOT ask follow-up questions.
 Language to respond in: ${language}
 
@@ -107,8 +109,10 @@ EMERGENCY RULE: If they describe chest pain + arm pain, sudden loss of conscious
 
 Extract from their message:
 - chief_complaint: what they said (in English for clinical use)
-- specialization: the medical specialty needed (e.g. "Cardiology", "General Medicine", "Orthopedics", "Dermatology", "ENT")
+- specialization: the medical specialty needed (e.g. "Cardiology", "General Medicine", "Orthopedics", "Dermatology", "ENT", "Pediatrics")
 - urgency: NORMAL | PRIORITY | EMERGENCY
+- predicted_duration: integer consultation duration in minutes (5, 10, 15, or 20) based on complexity
+- pre_visit_checklist: array of 3 specific, actionable pre-visit instructions in ${language} for this patient
 
 Respond with JSON code block:
 \`\`\`json
@@ -120,6 +124,8 @@ Respond with JSON code block:
     "urgency": "NORMAL",
     "chief_complaint": "complaint in English",
     "severity": "mild/moderate/severe",
+    "predicted_duration": 10,
+    "pre_visit_checklist": ["instruction 1", "instruction 2", "instruction 3"],
     "notes": "1 line clinical note"
   },
   "quick_replies": []
@@ -320,6 +326,12 @@ If patient has pain/fever and appointment is upcoming, populate interim_relief w
           chief_complaint: conv.triage.chief_complaint || '',
           onset_and_duration: conv.triage.duration,
           severity: conv.triage.severity,
+          predicted_duration: conv.triage.predicted_duration || 10,
+          pre_visit_checklist: conv.triage.pre_visit_checklist || [
+            'Bring your previous prescriptions or lab reports',
+            'List any current medications you are taking',
+            'Arrive 10 minutes before your appointment time'
+          ],
           pain_characteristics: conv.triage.notes,
           notes: conv.triage.notes,
         } : undefined,

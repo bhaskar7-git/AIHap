@@ -220,8 +220,11 @@ export const DoctorDashboard: React.FC = () => {
 
         <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-1">
           <span className="text-xs font-bold uppercase text-amber-600">Waiting in Queue</span>
-          <div className="text-3xl font-black text-amber-600 font-mono">{queueState?.waitingCount || 0}</div>
-          <span className="text-[11px] text-slate-500">Patients in waiting area</span>
+          <div className="text-3xl font-black text-amber-600 font-mono">
+            {queueState?.waitingCount || 0}
+            <span className="text-xs font-bold text-emerald-700 ml-2">({queueState?.arrivedCount || 0} Arrived)</span>
+          </div>
+          <span className="text-[11px] text-slate-500">Patients in waiting room</span>
         </div>
 
         <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-1">
@@ -346,8 +349,24 @@ export const DoctorDashboard: React.FC = () => {
                       </td>
 
                       <td className="py-3.5 px-4">
-                        <div className="font-bold text-slate-900">{token.patient_name || 'Patient'}</div>
-                        <div className="text-[11px] text-slate-500">{token.patient_phone || '+91 98765 00000'}</div>
+                        <div className="font-bold text-slate-900 flex items-center gap-2">
+                          {token.patient_name || 'Patient'}
+                          {token.arrived_at ? (
+                            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-extrabold rounded-md flex items-center gap-1">
+                              🟢 Arrived
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-medium rounded-md">
+                              ⏳ En Route
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-slate-500 flex items-center gap-2 mt-0.5">
+                          <span>{token.patient_phone || '+91 98765 00000'}</span>
+                          {token.predicted_duration && (
+                            <span className="text-brand-600 font-semibold">• Est: {token.predicted_duration}m consult</span>
+                          )}
+                        </div>
                       </td>
 
                       <td className="py-3.5 px-4">

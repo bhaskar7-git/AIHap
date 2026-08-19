@@ -115,6 +115,8 @@ export interface TriageResponse {
     onset_and_duration?: string;
     duration?: string;
     severity?: string;
+    predicted_duration?: number;
+    pre_visit_checklist?: string[];
     pain_characteristics?: string;
     notes?: string;
   };
@@ -172,6 +174,9 @@ export const appointmentApi = {
 export const queueApi = {
   getDoctorQueue: (doctorId: string, date?: string) =>
     api.get<{ success: boolean; data: QueueState }>(`/queue/${doctorId}`, { params: { date } }),
+
+  patientArrival: (tokenId: string) =>
+    api.post<{ success: boolean; data: { token: Token; queueState: QueueState }; message: string }>(`/queue/arrive/${tokenId}`),
 
   callNext: (doctorId: string) =>
     api.post<{ success: boolean; data: { calledToken: Token | null; queueState: QueueState }; message: string }>(`/queue/${doctorId}/call-next`),
