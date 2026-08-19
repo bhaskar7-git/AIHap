@@ -10,10 +10,13 @@ import {
   CheckCircle2,
   AlertTriangle,
   ArrowRight,
-  ShieldCheck
+  ShieldCheck,
+  XCircle,
+  QrCode
 } from 'lucide-react';
 import { Token, Appointment } from '../../types/index.js';
 import { StatusBadge } from '../common/StatusBadge.js';
+import { getScannableBaseUrl } from '../../utils/qrHelper.js';
 
 interface TokenCardProps {
   token: Token;
@@ -64,9 +67,10 @@ export const TokenCard: React.FC<TokenCardProps> = ({
     bannerSubtitle = "Thank you for visiting SmartQueue healthcare.";
   }
 
-  // Generate a real, scannable URL — points to live queue for this appointment
-  const baseUrl = window.location.origin;
-  const qrData = `${baseUrl}/patient/queue?doctor=${token.doctor_id || ''}&token=${token.id}&t=${token.token_number}`;
+  // QR Code URL specifically dedicated to CANCEL the appointment/token
+  const baseUrl = getScannableBaseUrl();
+  const passId = appointment?.id || token.appointment_id || token.id;
+  const cancelQrData = `${baseUrl}/cancel-token/${passId}`;
 
   return (
     <div className="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden transition-all hover:shadow-2xl">
@@ -166,18 +170,30 @@ export const TokenCard: React.FC<TokenCardProps> = ({
             </div>
           </div>
 
+          {/* Dedicated Cancel Appointment QR Code */}
           <div className="flex items-center gap-4">
-            <div className="p-2 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col items-center">
-              <QRCodeSVG value={qrData} size={64} />
-              <span className="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-wider">Fast Scan</span>
-            </div>
+            {!isCancelled && (
+              <a
+                href={cancelQrData}
+                target="_blank"
+                rel="noreferrer"
+                title="Scan or Click QR Code ONLY to Cancel Appointment"
+                className="p-2.5 bg-rose-50/60 rounded-2xl border border-rose-200 shadow-sm flex flex-col items-center hover:bg-rose-100/80 hover:border-rose-400 transition-all group text-center"
+              >
+                <QRCodeSVG value={cancelQrData} size={72} level="H" />
+                <span className="text-[9px] font-extrabold text-rose-700 group-hover:text-rose-800 mt-1 uppercase tracking-wider flex items-center gap-1">
+                  <XCircle className="w-3 h-3 text-rose-600" />
+                  Scan QR to Cancel
+                </span>
+              </a>
+            )}
 
             {onCancel && token.status === 'WAITING' && (
               <button
                 onClick={onCancel}
-                className="px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 border border-rose-200 rounded-xl transition-colors"
+                className="px-4 py-2.5 text-xs font-bold text-rose-600 hover:bg-rose-50 border border-rose-200 rounded-xl transition-colors flex items-center gap-1.5"
               >
-                Cancel Token
+                <XCircle className="w-4 h-4" /> Cancel Token
               </button>
             )}
           </div>

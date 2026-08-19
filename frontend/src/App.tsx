@@ -18,6 +18,7 @@ import { LandingPage } from './pages/LandingPage.js';
 import { LoginPage } from './pages/LoginPage.js';
 import { RegisterPage } from './pages/RegisterPage.js';
 import { QrRegisterPage } from './pages/QrRegisterPage.js';
+import { TokenPassPage } from './pages/patient/TokenPassPage.js';
 import { NotFoundPage } from './pages/NotFoundPage.js';
 
 // Patient Pages
@@ -72,6 +73,8 @@ export const App: React.FC = () => {
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/qr-register" element={<QrRegisterPage />} />
+                <Route path="/token-pass/:id" element={<TokenPassPage />} />
+                <Route path="/cancel-token/:id" element={<TokenPassPage />} />
                 
                 {/* Public / Search Accessible */}
                 <Route path="/patient/hospitals" element={<HospitalsPage />} />

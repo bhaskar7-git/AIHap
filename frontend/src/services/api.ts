@@ -150,6 +150,7 @@ export const appointmentApi = {
     appointment_date: string;
     appointment_time: string;
     appointment_type?: string;
+    patient_id?: string;
     ai_summary?: any;
     priority?: 'NORMAL' | 'PRIORITY' | 'EMERGENCY';
   }) =>
@@ -161,8 +162,14 @@ export const appointmentApi = {
   getById: (id: string) =>
     api.get<{ success: boolean; data: Appointment }>(`/appointments/${id}`),
 
+  getPublicById: (id: string) =>
+    api.get<{ success: boolean; data: Appointment }>(`/appointments/public/${id}`),
+
   cancel: (id: string) =>
     api.post<{ success: boolean; message: string }>(`/appointments/${id}/cancel`),
+
+  publicCancel: (id: string) =>
+    api.post<{ success: boolean; message: string }>(`/appointments/public/${id}/cancel`),
 
   getTokenById: (id: string) =>
     api.get<{ success: boolean; data: Token }>(`/tokens/${id}`),

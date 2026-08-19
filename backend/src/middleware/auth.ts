@@ -25,13 +25,36 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
     }
 
     // Fetch profile from profiles table
-    const { data: profile, error: profileErr } = await supabase
+    let { data: profile, error: profileErr } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', authUser.id)
       .maybeSingle();
 
-    if (profileErr || !profile) {
+    // Auto-fallback: If user exists in Auth but not in profiles table, create the profile entry on-the-fly
+    if (!profile) {
+      const name = authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'User';
+      const role = (authUser.user_metadata?.role as UserRole) || 'PATIENT';
+      const phone = authUser.user_metadata?.phone || '';
+
+      const { data: newProfile, error: createErr } = await supabase
+        .from('profiles')
+        .upsert({
+          id: authUser.id,
+          name,
+          phone,
+          role,
+          created_at: new Date().toISOString(),
+        })
+        .select()
+        .maybeSingle();
+
+      if (!createErr && newProfile) {
+        profile = newProfile;
+      }
+    }
+
+    if (!profile) {
       res.status(401).json({ success: false, message: 'User profile not found.' });
       return;
     }

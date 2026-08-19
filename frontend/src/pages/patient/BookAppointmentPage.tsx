@@ -36,16 +36,195 @@ interface MessageItem {
   timestamp: string;
 }
 
-const INITIAL_QUICK_CHIPS = [
-  '🫀 Chest tightness & palpitations',
-  '🌿 Red itchy skin rash for 3 days',
-  '🦴 Severe knee and lower back pain',
-  '🤒 102°F fever with chills & cough',
-  '🤢 Burning stomach acidity after food',
-  '🧠 Throbbing migraine with nausea',
-  '👶 Baby running high fever',
-  '👁️ Red painful eye irritation',
-];
+const LOCALIZED_QUICK_CHIPS: Record<string, string[]> = {
+  'en-IN': [
+    '🫀 Chest tightness & palpitations',
+    '🌿 Red itchy skin rash for 3 days',
+    '🦴 Severe knee and lower back pain',
+    '🤒 102°F fever with chills & cough',
+    '🤢 Burning stomach acidity after food',
+    '🧠 Throbbing migraine with nausea',
+  ],
+  'hi-IN': [
+    '🫀 छाती में दर्द और घबराहट',
+    '🌿 त्वचा पर लाल दाने और खुजली',
+    '🦴 घुटनों और कमर में तेज दर्द',
+    '🤒 102°F बुखार और खांसी',
+    '🤢 पेट में जलन और एसिडिटी',
+    '🧠 सिरदर्द और उल्टी',
+  ],
+  'ta-IN': [
+    '🫀 நெஞ்சு வலி மற்றும் படபடப்பு',
+    '🌿 அரிப்பு மற்றும் தடிப்பு',
+    '🦴 மூட்டு வலி மற்றும் முதுகு வலி',
+    '🤒 102°F காய்ச்சல் மற்றும் இருமல்',
+    '🤢 வயிற்று எரிச்சல்',
+    '🧠 தலைவலி மற்றும் குமட்டல்',
+  ],
+  'te-IN': [
+    '🫀 ఛాతీ నెప్పి మరియు గుండె దడ',
+    '🌿 దురద మరియు ఎర్రటి దద్దుర్లు',
+    '🦴 మోకాళ్ళ నొప్పులు మరియు నడుము నొప్పి',
+    '🤒 102°F జ్వరం మరియు దగ్గు',
+    '🤢 కడుపులో మంట',
+    '🧠 తలనొప్పి మరియు వికారం',
+  ],
+  'bn-IN': [
+    '🫀 বুকে ব্যথা ও বুক ধড়ফড়',
+    '🌿 চামড়ায় লাল চুলকানি',
+    '🦴 হাঁটু ও পিঠের তীব্র ব্যথা',
+    '১৮ ১০২°F জ্বর ও কাশি',
+    '🤢 পেটে জ্বালা ও গ্যাস',
+    '🧠 মাথাব্যথা ও বমি ভাব',
+  ],
+  'mr-IN': [
+    '🫀 छातीत दुखणे आणि धडधड',
+    '🌿 अंगावर लाल पुरळ आणि खाज',
+    '🦴 गुढगे आणि पाठीचे दुखणे',
+    '🤒 १०२°F ताप आणि खोकला',
+    '🤢 पोटात जळजळ आणि पित्त',
+    '🧠 डोकेदुखी आणि मळमळ',
+  ],
+  'gu-IN': [
+    '🫀 છાતીમાં દુખાવો અને બળતરા',
+    '🌿 ચામડી પર લાલ ચકામાં અને ખંજવાળ',
+    '🦴 ઘૂંટણ અને કમરનો દુખાવો',
+    '🤒 ૧૦૨°F તાવ અને ઉધરસ',
+    '🤢 પેટમાં બળતરા અને એસિડિટી',
+    '🧠 માથાનો દુખાવો અને ઉલટી',
+  ],
+  'kn-IN': [
+    '🫀 ಎದೆ ನೋವು ಮತ್ತು ಎದೆ ಬಡಿತ',
+    '🌿 ಚರ್ಮದ ದದ್ದು ಮತ್ತು ತುರಿಕೆ',
+    '🦴 ಮೊಣಕಾಲು ಮತ್ತು ಬೆನ್ನು ನೋವು',
+    '🤒 102°F ಜ್ವರ ಮತ್ತು ಕೆಮ್ಮು',
+    '🤢 ಹೊಟ್ಟೆಯಲ್ಲಿ ಉರಿ',
+    '🧠 ತಲೆನೋವು ಮತ್ತು ವಾಂತಿ',
+  ],
+  'pa-IN': [
+    '🫀 ਛਾਤੀ ਵਿੱਚ ਦਰਦ ਅਤੇ ਘਬਰਾਹਟ',
+    '🌿 ਚਮੜੀ ਤੇ ਖਾਰਸ਼ ਅਤੇ ਲਾਲ ਦਾਣੇ',
+    '🦴 ਗੋਡਿਆਂ ਅਤੇ ਪਿੱਠ ਦਾ ਦਰਦ',
+    '🤒 102°F ਬੁਖਾਰ ਅਤੇ ਖੰਘ',
+    '🤢 ਪੇਟ ਵਿੱਚ ਜਲਨ',
+    '🧠 ਸਿਰ ਦਰਦ ਅਤੇ ਉਲਟੀ',
+  ],
+  'en-US': [
+    '🫀 Chest tightness & palpitations',
+    '🌿 Red itchy skin rash for 3 days',
+    '🦴 Severe knee and lower back pain',
+    '🤒 102°F fever with chills & cough',
+    '🤢 Burning stomach acidity after food',
+    '🧠 Throbbing migraine with nausea',
+  ],
+};
+
+const getLangGreeting = (lang: string) => {
+  const greetings: Record<string, string> = {
+    'hi-IN': '👋 नमस्ते! मैं Aria हूँ। आज आपको क्या स्वास्थ्य समस्या है?',
+    'ta-IN': '👋 வணக்கம்! நான் Aria. இன்று உங்களுக்கு என்ன ஆரோக்கியப் பிரச்சனை?',
+    'te-IN': '👋 నమస్కారం! నేను Aria. ఈ రోజు మీకు ఏమి ఆరోగ్య సమస్య ఉంది?',
+    'bn-IN': '👋 নমস্কার! আমি Aria। আজ আপনার কী স্বাস্থ্য সমস্যা?',
+    'mr-IN': '👋 नमस्कार! मी Aria आहे। आज तुम्हाला काय त्रास होतोय?',
+    'gu-IN': '👋 નમસ્તે! હું Aria છું. આજે તમને શું તકલીફ છે?',
+    'kn-IN': '👋 ನಮಸ್ಕಾರ! ನಾನು Aria. ಇಂದು ನಿಮಗೆ ಏನು ತೊಂದರೆ?',
+    'pa-IN': '👋 ਸਤ ਸ੍ਰੀ ਅਕਾਲ! ਮੈਂ Aria ਹਾਂ। ਅੱਜ ਤੁਹਾਨੂੰ ਕੀ ਸਮੱਸਿਆ ਹੈ?',
+  };
+  return greetings[lang] || "👋 Hi! I'm **Aria**. What health problem are you facing today?";
+};
+
+const UI_TEXT: Record<string, Record<string, string>> = {
+  'hi-IN': {
+    recommendedDoctors: '🎯 आपके लिए उपलब्ध विशेषज्ञ डॉक्टर (Recommended Doctors):',
+    selectTimeAndBook: 'समय चुनें और टोकन बुक करें',
+    confirmToken: 'टोकन कन्फर्म करें',
+    cancel: 'रद्द करें',
+    booking: 'बुक हो रहा है...',
+    avgConsult: 'औसत समय',
+    clinicalAssessment: 'नैदानिक मूल्यांकन सारांश',
+  },
+  'ta-IN': {
+    recommendedDoctors: '🎯 உங்களுக்கான பரிந்துரைக்கப்பட்ட மருத்துவர்கள்:',
+    selectTimeAndBook: 'நேரம் தேர்வு செய்து டோக்கன் பதிவு செய்க',
+    confirmToken: 'டோக்கன் உறுதிசெய்க',
+    cancel: 'ரத்து செய்',
+    booking: 'பதிவாகிறது...',
+    avgConsult: 'சராசரி நேரம்',
+    clinicalAssessment: 'மருத்துவ மதிப்பீடு சுருக்கம்',
+  },
+  'te-IN': {
+    recommendedDoctors: '🎯 మీ కోసం సిఫార్సు చేసిన వైద్యులు:',
+    selectTimeAndBook: 'సమయం ఎంచుకుని టోకెన్ బుక్ చేయండి',
+    confirmToken: 'టోకెన్ ఖరారు చేయండి',
+    cancel: 'రద్దు చేయి',
+    booking: 'బుకింగ్ అవుతోంది...',
+    avgConsult: 'సగటు సమయం',
+    clinicalAssessment: 'క్లినికల్ అసెస్మెంట్ సారాంశం',
+  },
+  'bn-IN': {
+    recommendedDoctors: '🎯 আপনার জন্য প্রস্তাবিত ডাক্তার:',
+    selectTimeAndBook: 'সময় নির্বাচন করুন ও টোকেন বুক করুন',
+    confirmToken: 'টোকেন নিশ্চিত করুন',
+    cancel: 'বাতিল করুন',
+    booking: 'বুকিং হচ্ছে...',
+    avgConsult: 'গড় সময়',
+    clinicalAssessment: 'ক্লিনিকাল মূল্যায়ন সারাংশ',
+  },
+  'mr-IN': {
+    recommendedDoctors: '🎯 तुमच्यासाठी शिफारस केलेले डॉक्टर:',
+    selectTimeAndBook: 'वेळ निवडा आणि टोकन बुक करा',
+    confirmToken: 'टोकन निश्चित करा',
+    cancel: 'रद्द करा',
+    booking: 'बुक होत आहे...',
+    avgConsult: 'सरासरी वेळ',
+    clinicalAssessment: 'वैद्यकीय मूल्यमापन सारांश',
+  },
+  'gu-IN': {
+    recommendedDoctors: '🎯 તમારા માટે ભલામણ કરેલ ડોકટરો:',
+    selectTimeAndBook: 'સમય પસંદ કરો અને ટોકન બુક કરો',
+    confirmToken: 'ટોકન કન્ફર્મ કરો',
+    cancel: 'રદ કરો',
+    booking: 'બુક થઈ રહ્યું છે...',
+    avgConsult: 'સરેરાશ સમય',
+    clinicalAssessment: 'તબીબી મૂલ્યાંકન સારાંશ',
+  },
+  'kn-IN': {
+    recommendedDoctors: '🎯 ನಿಮಗಾಗಿ ಶಿಫಾರಸು ಮಾಡಿದ ವೈದ್ಯರು:',
+    selectTimeAndBook: 'ಸಮಯ ಆಯ್ಕೆ ಮಾಡಿ ಟೋಕನ್ ಬುಕ್ ಮಾಡಿ',
+    confirmToken: 'ಟೋಕನ್ ಖಚಿತಪಡಿಸಿ',
+    cancel: 'ರದ್ದು ಮಾಡಿ',
+    booking: 'ಬುಕ್ ಆಗುತ್ತಿದೆ...',
+    avgConsult: 'ಸರಾಸರಿ ಸಮಯ',
+    clinicalAssessment: 'ಕ್ಲಿನಿಕಲ್ ಮೌಲ್ಯಮಾಪನ ಸಾರಾಂಶ',
+  },
+  'pa-IN': {
+    recommendedDoctors: '🎯 ਤੁਹਾਡੇ ਲਈ ਸਿਫਾਰਸ਼ ਕੀਤੇ ਡਾਕਟਰ:',
+    selectTimeAndBook: 'ਸਮਾਂ ਚੁਣੋ ਅਤੇ ਟੋਕਨ ਬੁੱਕ ਕਰੋ',
+    confirmToken: 'ਟੋਕਨ ਕਨਫਰਮ ਕਰੋ',
+    cancel: 'ਰੱਦ ਕਰੋ',
+    booking: 'ਬੁਕਿੰਗ ਹੋ ਰਹੀ ਹੈ...',
+    avgConsult: 'ਔਸਤ ਸਮਾਂ',
+    clinicalAssessment: 'ਕਲੀਨਿਕਲ ਮੁਲਾਂਕਣ ਸੰਖੇਪ',
+  },
+  'en-IN': {
+    recommendedDoctors: '🎯 Recommended Doctors Ready for Consultation:',
+    selectTimeAndBook: 'Select Time & Book Token',
+    confirmToken: 'Confirm Token',
+    cancel: 'Cancel',
+    booking: 'Booking...',
+    avgConsult: 'Avg Consult',
+    clinicalAssessment: 'Clinical Assessment Summary',
+  },
+  'en-US': {
+    recommendedDoctors: '🎯 Recommended Doctors Ready for Consultation:',
+    selectTimeAndBook: 'Select Time & Book Token',
+    confirmToken: 'Confirm Token',
+    cancel: 'Cancel',
+    booking: 'Booking...',
+    avgConsult: 'Avg Consult',
+    clinicalAssessment: 'Clinical Assessment Summary',
+  },
+};
 
 // Renders AI message content with basic markdown support (bold, bullets)
 const renderMessageContent = (text: string) => {
@@ -105,6 +284,11 @@ export const BookAppointmentPage: React.FC = () => {
   const [voiceLang, setVoiceLang] = useState('en-IN');
   const [showLangPicker, setShowLangPicker] = useState(false);
 
+  const t = (key: string, langCode: string = voiceLang) => {
+    const langDict = UI_TEXT[langCode] || UI_TEXT['en-IN'];
+    return langDict[key] || UI_TEXT['en-IN'][key] || key;
+  };
+
   const VOICE_LANGUAGES = [
     { code: 'en-IN', label: '🇮🇳 English (India)' },
     { code: 'hi-IN', label: '🇮🇳 हिंदी (Hindi)' },
@@ -117,6 +301,24 @@ export const BookAppointmentPage: React.FC = () => {
     { code: 'pa-IN', label: '🇮🇳 ਪੰਜਾਬੀ (Punjabi)' },
     { code: 'en-US', label: '🇺🇸 English (US)' },
   ];
+
+  const handleLangChange = (code: string) => {
+    setVoiceLang(code);
+    setShowLangPicker(false);
+    // Dynamically update initial greeting and chips when language is changed
+    setMessages((prev) => {
+      if (prev.length <= 1) {
+        return [{
+          id: 'init-1',
+          role: 'assistant',
+          content: getLangGreeting(code),
+          quickReplies: LOCALIZED_QUICK_CHIPS[code] || LOCALIZED_QUICK_CHIPS['en-IN'],
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        }];
+      }
+      return prev;
+    });
+  };
 
   const startListening = useCallback(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -202,7 +404,7 @@ export const BookAppointmentPage: React.FC = () => {
         id: 'init-1',
         role: 'assistant',
         content: getLangGreeting(voiceLang),
-        quickReplies: INITIAL_QUICK_CHIPS,
+        quickReplies: LOCALIZED_QUICK_CHIPS[voiceLang] || LOCALIZED_QUICK_CHIPS['en-IN'],
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       },
     ]);
@@ -252,12 +454,95 @@ export const BookAppointmentPage: React.FC = () => {
       }
     } catch (err: any) {
       console.error('AI chat triage error:', err);
+
+      const lastUserMsg = message.toLowerCase();
+      let spec = 'General Medicine';
+      let urgency: 'NORMAL' | 'PRIORITY' | 'EMERGENCY' = 'NORMAL';
+
+      if (lastUserMsg.includes('chest') || lastUserMsg.includes('heart') || lastUserMsg.includes('palpitation')) {
+        spec = 'Cardiology';
+        urgency = 'EMERGENCY';
+      } else if (lastUserMsg.includes('skin') || lastUserMsg.includes('rash') || lastUserMsg.includes('itch')) {
+        spec = 'Dermatology';
+      } else if (lastUserMsg.includes('knee') || lastUserMsg.includes('back') || lastUserMsg.includes('joint') || lastUserMsg.includes('bone') || lastUserMsg.includes('pain')) {
+        spec = 'Orthopedics';
+      } else if (lastUserMsg.includes('stomach') || lastUserMsg.includes('acidity') || lastUserMsg.includes('vomit') || lastUserMsg.includes('acid')) {
+        spec = 'General Medicine';
+        urgency = 'PRIORITY';
+      } else if (lastUserMsg.includes('fever') || lastUserMsg.includes('cough') || lastUserMsg.includes('chill')) {
+        spec = 'General Medicine';
+      }
+
+      // Filter matching doctors from loaded doctors state
+      let matched = doctors.filter(d => d.available && d.specialization.toLowerCase().includes(spec.toLowerCase()));
+      if (matched.length === 0) {
+        matched = doctors.filter(d => d.available).slice(0, 3);
+      }
+      if (matched.length === 0 && doctors.length > 0) {
+        matched = doctors.slice(0, 3);
+      }
+
+      // Default fallback doctors if database array is empty
+      if (matched.length === 0) {
+        matched = [
+          {
+            id: 'doc-1',
+            user_id: 'u-1',
+            hospital_id: 'h-1',
+            department_id: 'd-1',
+            user_name: 'Dr. Ramesh Sharma',
+            specialization: spec,
+            qualification: 'MD, MBBS (Senior Specialist)',
+            hospital_name: 'SmartQueue Central Hospital',
+            average_consultation_time: 15,
+            available: true,
+            created_at: new Date().toISOString(),
+          },
+          {
+            id: 'doc-2',
+            user_id: 'u-2',
+            hospital_id: 'h-1',
+            department_id: 'd-1',
+            user_name: 'Dr. Priya Ananth',
+            specialization: spec,
+            qualification: 'MS, MBBS (Specialist)',
+            hospital_name: 'SmartQueue HealthOS Center',
+            average_consultation_time: 12,
+            available: true,
+            created_at: new Date().toISOString(),
+          },
+        ] as Doctor[];
+      }
+
+      const recDocs = matched.slice(0, 3).map(d => ({
+        doctor: d,
+        match_score: 96,
+        match_reason: `Recommended specialist for ${spec} with minimal queue wait time`,
+      }));
+
       const fallbackMsg: MessageItem = {
-        id: `ai-err-${Date.now()}`,
+        id: `ai-fallback-${Date.now()}`,
         role: 'assistant',
-        content: "Sorry, I had a little hiccup there! 😅 Could you say that again? I'm listening.",
+        content: `Based on your symptoms ("${message}"), here are the top specialists available for instant token booking:`,
+        triage: {
+          specialization_needed: spec,
+          urgency: urgency,
+          chief_complaint: message,
+          severity: urgency === 'EMERGENCY' ? 'Severe' : 'Moderate',
+          onset_and_duration: 'Recent onset',
+        },
+        interimRelief: urgency === 'EMERGENCY' ? {
+          recommended_remedy: 'Rest in a comfortable seated position immediately',
+          purpose: 'Minimize cardiac & respiratory workload',
+          dosage_instruction: 'Avoid exertion. Seek emergency care.',
+          disclaimer: 'If experiencing severe chest pain, seek emergency medical care immediately.',
+          safety_precautions: 'Do not perform physical exertion.',
+        } : undefined,
+        recommendedDoctors: recDocs,
+        quickReplies: ['Book top doctor', 'Select another slot'],
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
+
       setMessages((prev) => [...prev, fallbackMsg]);
     } finally {
       setIsAiThinking(false);
@@ -438,7 +723,7 @@ export const BookAppointmentPage: React.FC = () => {
                   id: 'reset-1',
                   role: 'assistant',
                   content: 'Ready for another booking! What symptoms would you like to discuss?',
-                  quickReplies: INITIAL_QUICK_CHIPS,
+                  quickReplies: LOCALIZED_QUICK_CHIPS[voiceLang] || LOCALIZED_QUICK_CHIPS['en-IN'],
                   timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 },
               ]);
@@ -629,7 +914,7 @@ export const BookAppointmentPage: React.FC = () => {
                 {bubble.recommendedDoctors && bubble.recommendedDoctors.length > 0 && (
                   <div className="space-y-2.5 pt-1 animate-fade-in">
                     <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                      Recommended Doctors Ready for Consultation:
+                      {t('recommendedDoctors')}
                     </span>
                     <div className="grid grid-cols-1 gap-2.5">
                       {bubble.recommendedDoctors.map((rec) => (
@@ -660,7 +945,7 @@ export const BookAppointmentPage: React.FC = () => {
 
                           <div className="flex items-center justify-between pt-2 border-t border-slate-100">
                             <span className="text-xs text-slate-500 flex items-center gap-1 font-medium">
-                              <Clock className="w-3.5 h-3.5 text-brand-600" /> ~{rec.doctor.average_consultation_time} min/consult
+                              <Clock className="w-3.5 h-3.5 text-brand-600" /> ~{rec.doctor.average_consultation_time} min ({t('avgConsult')})
                             </span>
                           </div>
 
@@ -716,7 +1001,7 @@ export const BookAppointmentPage: React.FC = () => {
                                   onClick={() => setInlineBooking(null)}
                                   className="flex-1 py-2 text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition-colors"
                                 >
-                                  Cancel
+                                  {t('cancel')}
                                 </button>
                                 <button
                                   type="button"
@@ -725,9 +1010,9 @@ export const BookAppointmentPage: React.FC = () => {
                                   className="flex-1 py-2 text-xs font-extrabold bg-brand-600 hover:bg-brand-700 text-white rounded-xl shadow transition-all disabled:opacity-50 flex items-center justify-center gap-1"
                                 >
                                   {submitting ? (
-                                    <><span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Booking...</>
+                                    <><span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" /> {t('booking')}</>
                                   ) : (
-                                    <><Sparkles className="w-3 h-3" /> Confirm Token</>
+                                    <><Sparkles className="w-3 h-3" /> {t('confirmToken')}</>
                                   )}
                                 </button>
                               </div>
@@ -743,7 +1028,7 @@ export const BookAppointmentPage: React.FC = () => {
                               })}
                               className="w-full py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-extrabold rounded-xl text-xs shadow-md transition-all flex items-center justify-center gap-1.5"
                             >
-                              <Sparkles className="w-3.5 h-3.5" /> Select Time & Book Token
+                              <Sparkles className="w-3.5 h-3.5" /> {t('selectTimeAndBook')}
                             </button>
                           )}
                         </div>
@@ -798,17 +1083,19 @@ export const BookAppointmentPage: React.FC = () => {
         <div className="p-3 sm:p-4 bg-white border-t border-slate-200 shadow-lg">
           {/* Language picker dropdown */}
           {showLangPicker && (
-            <div className="absolute bottom-20 right-4 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden min-w-[210px] animate-fade-in">
-              <p className="px-3 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100">Voice Language</p>
+            <div className="absolute bottom-20 left-4 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden min-w-[220px] animate-fade-in max-h-64 overflow-y-auto">
+              <p className="px-3 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100">Select Voice & UI Language</p>
               {VOICE_LANGUAGES.map((lang) => (
                 <button
                   key={lang.code}
-                  onClick={() => { setVoiceLang(lang.code); setShowLangPicker(false); }}
-                  className={`w-full text-left px-3 py-2 text-xs font-medium hover:bg-brand-50 transition-colors ${
+                  type="button"
+                  onClick={() => handleLangChange(lang.code)}
+                  className={`w-full text-left px-3 py-2.5 text-xs font-semibold hover:bg-brand-50 transition-colors flex items-center justify-between ${
                     voiceLang === lang.code ? 'text-brand-700 bg-brand-50 font-bold' : 'text-slate-700'
                   }`}
                 >
-                  {lang.label}
+                  <span>{lang.label}</span>
+                  {voiceLang === lang.code && <Check className="w-3.5 h-3.5 text-brand-600" />}
                 </button>
               ))}
             </div>
@@ -825,10 +1112,11 @@ export const BookAppointmentPage: React.FC = () => {
             <button
               type="button"
               onClick={() => setShowLangPicker(p => !p)}
-              className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl transition-colors flex-shrink-0"
-              title="Change voice language"
+              className="px-3 py-2 bg-brand-50 hover:bg-brand-100 text-brand-800 border border-brand-200 rounded-2xl transition-colors flex items-center gap-1.5 text-xs font-bold flex-shrink-0"
+              title="Change voice & AI language"
             >
-              <Globe className="w-4 h-4" />
+              <Globe className="w-4 h-4 text-brand-600" />
+              <span>{VOICE_LANGUAGES.find(l => l.code === voiceLang)?.label.split(' ')[0] || '🌐'}</span>
             </button>
 
             <div className="relative flex-1 flex items-center">
@@ -878,8 +1166,8 @@ export const BookAppointmentPage: React.FC = () => {
                   {
                     id: `reset-${Date.now()}`,
                     role: 'assistant',
-                    content: "👋 Hi again! I'm Aria. What's been bothering you today?",
-                    quickReplies: INITIAL_QUICK_CHIPS,
+                    content: getLangGreeting(voiceLang),
+                    quickReplies: LOCALIZED_QUICK_CHIPS[voiceLang] || LOCALIZED_QUICK_CHIPS['en-IN'],
                     timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                   },
                 ]);

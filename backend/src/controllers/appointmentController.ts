@@ -19,7 +19,9 @@ export const createAppointment = async (req: AuthRequest, res: Response): Promis
       priority: requestedPriority
     } = req.body;
 
-    const patientId = (req.user?.role === 'PATIENT') ? req.user.id : (patient_id || req.user?.id);
+    const patientId = (req.user?.role === 'PATIENT' && req.user.id)
+      ? req.user.id
+      : (patient_id || req.user?.id || 'pat-01');
 
     if (!doctor_id || !appointment_date || !appointment_time) {
       res.status(400).json({ success: false, message: 'Doctor ID, appointment date, and appointment time are required.' });
@@ -254,3 +256,47 @@ export const getTokenById = async (req: AuthRequest, res: Response): Promise<voi
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+export const publicGetAppointmentById = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const appt = await store.getAppointmentById(req.params.id as string);
+    if (!appt) {
+      res.status(404).json({ success: false, message: 'Appointment not found' });
+      return;
+    }
+    res.status(200).json({ success: true, data: appt });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const publicCancelAppointment = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const appt = await store.getAppointmentById(req.params.id as string);
+    if (!appt) {
+      res.status(404).json({ success: false, message: 'Appointment not found' });
+      return;
+    }
+
+    await store.updateAppointment(appt.id, { status: 'CANCELLED' });
+
+    if (appt.token) {
+      await store.updateToken(appt.token.id, { status: 'CANCELLED' });
+      await store.logQueueEvent({
+        id: uuidv4(),
+        token_id: appt.token.id,
+        event_type: 'CANCELLED',
+        created_at: new Date().toISOString(),
+      });
+    }
+
+    // Recalculate doctor queue
+    const queueState = await queueService.calculateAndRecalculateQueue(appt.doctor_id, appt.appointment_date);
+    socketService.emitQueueUpdate(appt.doctor_id, queueState);
+
+    res.status(200).json({ success: true, message: 'Digital Token cancelled successfully via QR Pass scan.' });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+

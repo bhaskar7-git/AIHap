@@ -28,9 +28,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const res = await api.get<{ success: boolean; user: User }>('/auth/me', {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
-      if (res.data.success) return res.data.user;
-    } catch (err) {
-      console.error('hydrateUser error:', err);
+      if (res.data?.success) return res.data.user;
+    } catch (err: any) {
+      console.error('hydrateUser error:', err?.response?.data || err?.message || err);
     }
     return null;
   };
