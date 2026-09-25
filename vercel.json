@@ -3,5 +3,10 @@
   "outputDirectory": "frontend/dist",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
-  ]
+  ],
+  "env": {
+    "VITE_SUPABASE_URL": "https://ofgnfdjpvyjfgmfmchrl.supabase.co",
+    "VITE_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9mZ25mZGpwdnlqZmdtZm1jaHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcwNDM0MjEsImV4cCI6MjEwMjYxOTQyMX0.nQe8loS6Gq65lRdSGaY9zWTUwd5avGI3I7FmEKM8UFQ",
+    "VITE_API_URL": "https://smartqueue-backend.onrender.com/api"
+  }
 }

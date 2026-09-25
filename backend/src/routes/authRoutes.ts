@@ -4,11 +4,11 @@ import { authenticateToken } from '../middleware/auth.js';
 
 const router = Router();
 
-// Kept as legacy stubs (return 410)
+// Active auth endpoints (Supabase-first with local fallback)
 router.post('/register', register);
 router.post('/login', login);
 
-// Active endpoints
+// Profile
 router.get('/me', authenticateToken, getMe);
 router.post('/sync-profile', syncProfile);
 

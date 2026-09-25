@@ -9,4 +9,6 @@ export const config = {
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
   GROQ_API_KEY: process.env.GROQ_API_KEY || '',
   NODE_ENV: process.env.NODE_ENV || 'development',
+  JWT_SECRET: process.env.JWT_SECRET || 'smartqueue-jwt-secret-2026-fallback',
 };
+
