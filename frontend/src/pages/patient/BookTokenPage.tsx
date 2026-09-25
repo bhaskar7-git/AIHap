@@ -21,7 +21,7 @@ const TIME_SLOTS = [
 
 export const BookTokenPage: React.FC = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, user, demoLogin } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -81,26 +81,24 @@ export const BookTokenPage: React.FC = () => {
   const handleConfirmBooking = async (overrideEmergency?: boolean) => {
     if (!selectedDoctor) return;
     const emergencyMode = overrideEmergency !== undefined ? overrideEmergency : isEmergency;
+
+    // Require authentication — redirect to login if not signed in
+    if (!isAuthenticated || !user) {
+      navigate(`/login?redirect=/patient/book-token`);
+      return;
+    }
+
     setBooking(true);
     setBookingError('');
 
     try {
-      // Auto-authenticate if guest/unauthenticated user
-      if (!isAuthenticated || !user) {
-        try {
-          await demoLogin('PATIENT');
-        } catch (authErr) {
-          console.error('Auto login error:', authErr);
-        }
-      }
-
       const res = await appointmentApi.create({
         doctor_id: selectedDoctor.id,
         appointment_date: bookingDate,
         appointment_time: bookingTime,
         appointment_type: emergencyMode ? '🚨 EMERGENCY Fast-Track Triage' : 'General Consultation',
         priority: emergencyMode ? 'EMERGENCY' : 'NORMAL',
-        patient_id: user?.id,
+        patient_id: user.id,
       });
       if (res.data?.success) {
         setConfirmedToken(res.data.data);
@@ -112,8 +110,14 @@ export const BookTokenPage: React.FC = () => {
       }
     } catch (err: any) {
       console.error('Booking error:', err);
-      const errMsg = err?.response?.data?.message || err?.message;
-      setBookingError(errMsg || 'Booking failed. Please try again.');
+      const msg = err?.response?.data?.message || err?.message;
+      // Friendly auth error message
+      if (err?.response?.status === 401) {
+        setBookingError('Session expired. Please sign in again.');
+        setTimeout(() => navigate('/login?redirect=/patient/book-token'), 1500);
+      } else {
+        setBookingError(msg || 'Booking failed. Please try again.');
+      }
     } finally {
       setBooking(false);
     }
@@ -370,10 +374,7 @@ export const BookTokenPage: React.FC = () => {
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         type="button"
-                        onClick={() => {
-                          setIsEmergency(false);
-                          handleConfirmBooking(false);
-                        }}
+                        onClick={() => { setIsEmergency(false); }}
                         disabled={booking}
                         className={`py-2.5 px-2 rounded-xl text-xs font-extrabold transition-all border flex items-center justify-center gap-1 active:scale-95 disabled:opacity-60 ${
                           !isEmergency
@@ -381,40 +382,19 @@ export const BookTokenPage: React.FC = () => {
                             : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
                         }`}
                       >
-                        {booking && !isEmergency ? (
-                          <>
-                            <span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                            Booking...
-                          </>
-                        ) : (
-                          <>
-                            <Ticket className="w-3.5 h-3.5" /> Standard Booking
-                          </>
-                        )}
+                        <Ticket className="w-3.5 h-3.5" /> Standard
                       </button>
                       <button
                         type="button"
-                        onClick={() => {
-                          setIsEmergency(true);
-                          handleConfirmBooking(true);
-                        }}
+                        onClick={() => { setIsEmergency(true); }}
                         disabled={booking}
                         className={`py-2.5 px-2 rounded-xl text-xs font-extrabold transition-all border flex items-center justify-center gap-1 active:scale-95 disabled:opacity-60 ${
                           isEmergency
-                            ? 'bg-rose-600 hover:bg-rose-700 text-white border-rose-600 shadow-md ring-2 ring-rose-400 animate-pulse'
+                            ? 'bg-rose-600 hover:bg-rose-700 text-white border-rose-600 shadow-md ring-2 ring-rose-400'
                             : 'bg-white text-rose-700 border-rose-200 hover:bg-rose-50'
                         }`}
                       >
-                        {booking && isEmergency ? (
-                          <>
-                            <span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                            Swapping...
-                          </>
-                        ) : (
-                          <>
-                            <Zap className="w-3.5 h-3.5" /> 🚨 EMERGENCY SWAP
-                          </>
-                        )}
+                        <Zap className="w-3.5 h-3.5" /> 🚨 Emergency
                       </button>
                     </div>
                     {isEmergency ? (

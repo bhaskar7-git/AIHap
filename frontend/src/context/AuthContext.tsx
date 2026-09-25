@@ -18,19 +18,44 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/**
+ * Build a User object from Supabase auth user metadata as a fallback
+ * when the backend API is unreachable.
+ */
+const buildUserFromSupabase = (authUser: any, role?: UserRole): User => ({
+  id: authUser.id,
+  name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'User',
+  email: authUser.email || '',
+  phone: authUser.user_metadata?.phone || '',
+  role: (authUser.user_metadata?.role as UserRole) || role || 'PATIENT',
+  created_at: authUser.created_at || new Date().toISOString(),
+});
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
+  /**
+   * Tries to fetch the full profile from the backend.
+   * Falls back to building the user from Supabase metadata if the backend is unreachable.
+   */
   const hydrateUser = async (accessToken: string): Promise<User | null> => {
     try {
       const res = await api.get<{ success: boolean; user: User }>('/auth/me', {
         headers: { Authorization: `Bearer ${accessToken}` },
-      });
+        timeout: 8000,
+      } as any);
       if (res.data?.success) return res.data.user;
     } catch (err: any) {
-      console.error('hydrateUser error:', err?.response?.data || err?.message || err);
+      // Backend unreachable or returned error — fall back to Supabase metadata
+      console.warn('Backend /auth/me unreachable, using Supabase metadata as fallback:', err?.message || err?.code);
+      try {
+        const { data: { user: authUser } } = await supabase.auth.getUser(accessToken);
+        if (authUser) return buildUserFromSupabase(authUser);
+      } catch (supaErr) {
+        console.error('Supabase fallback also failed:', supaErr);
+      }
     }
     return null;
   };
@@ -76,8 +101,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       const accessToken = data.session.access_token;
       setToken(accessToken);
-      const hydrated = await hydrateUser(accessToken);
-      if (!hydrated) throw new Error('Could not load user profile.');
+
+      // Try backend hydration, fall back to Supabase metadata
+      let hydrated = await hydrateUser(accessToken);
+      if (!hydrated) {
+        if (data.user) {
+          hydrated = buildUserFromSupabase(data.user);
+        } else {
+          throw new Error('Could not load user profile.');
+        }
+      }
       setUser(hydrated);
       socketClient.joinUserRoom(hydrated.id);
       return hydrated;
@@ -96,7 +129,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   ): Promise<User> => {
     setLoading(true);
     try {
-      // 1. Create auth user
+      // 1. Create auth user in Supabase
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -110,29 +143,46 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
       if (error) throw new Error(error.message);
       if (!data.session) {
-        throw new Error('Registration successful! Please check your email inbox to confirm your account or sign in directly.');
+        // Email confirmation required — no session yet
+        throw new Error(
+          'Registration successful! Please check your email inbox to confirm your account, then sign in.'
+        );
       }
 
       const accessToken = data.session.access_token;
 
-      // 2. Sync profile to backend (creates the profiles / doctors row)
-      await api.post(
-        '/auth/sync-profile',
-        {
-          name,
-          phone,
-          role: role || 'PATIENT',
-          ...(extraData || {}),
-        },
-        {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }
-      );
+      // 2. Sync profile to backend (non-fatal — backend may be offline)
+      try {
+        await api.post(
+          '/auth/sync-profile',
+          {
+            name,
+            phone,
+            role: role || 'PATIENT',
+            ...(extraData || {}),
+          },
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+            timeout: 8000,
+          } as any
+        );
+      } catch (syncErr: any) {
+        // Backend unreachable — profile sync failed but Supabase auth registration succeeded
+        console.warn('Backend sync-profile failed (non-fatal):', syncErr?.message || syncErr?.code);
+      }
 
-      // 3. Hydrate user
+      // 3. Hydrate user (with fallback to Supabase metadata)
       setToken(accessToken);
-      const hydrated = await hydrateUser(accessToken);
-      if (!hydrated) throw new Error('Could not load user profile after registration.');
+      let hydrated = await hydrateUser(accessToken);
+      if (!hydrated) {
+        const fallbackAuthUser = data.user || {
+          id: data.session.user.id,
+          email,
+          user_metadata: { name, phone, role: role || 'PATIENT' },
+          created_at: new Date().toISOString(),
+        };
+        hydrated = buildUserFromSupabase(fallbackAuthUser, (role || 'PATIENT') as UserRole);
+      }
       setUser(hydrated);
       socketClient.joinUserRoom(hydrated.id);
       return hydrated;
