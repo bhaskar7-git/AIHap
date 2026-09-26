@@ -26,6 +26,27 @@ interface LocalUser {
 
 const localUsers: Map<string, LocalUser> = new Map();
 
+// ─── Seed demo users (always available, even without Supabase) ────────────────
+const DEMO_SEEDS = [
+  { id: 'demo-patient-01', name: 'Demo Patient',  email: 'patient@smartqueue.com', phone: '9000000001', role: 'PATIENT', password: 'Patient@123' },
+  { id: 'demo-doctor-01',  name: 'Demo Doctor',   email: 'doctor@smartqueue.com',  phone: '9000000002', role: 'DOCTOR',  password: 'Doctor@123',  specialization: 'General Physician', qualification: 'MBBS' },
+  { id: 'demo-admin-01',   name: 'Demo Admin',    email: 'admin@smartqueue.com',   phone: '9000000003', role: 'ADMIN',   password: 'Admin@123' },
+];
+
+(async () => {
+  for (const seed of DEMO_SEEDS) {
+    const password_hash = await bcrypt.hash(seed.password, 10);
+    localUsers.set(seed.id, {
+      id: seed.id, name: seed.name, email: seed.email, phone: seed.phone,
+      role: seed.role, password_hash, created_at: new Date().toISOString(),
+      specialization: (seed as any).specialization,
+      qualification: (seed as any).qualification,
+    });
+  }
+  console.log('✅ Demo users seeded into local auth store (patient/doctor/admin).');
+})();
+
+
 const signToken = (userId: string, role: string): string =>
   jwt.sign({ sub: userId, role }, config.JWT_SECRET, { expiresIn: '7d' });
 
@@ -207,7 +228,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
 /**
  * POST /api/auth/login
- * Tries Supabase first; falls back to local bcrypt check if Supabase is unavailable.
+ * Checks local store first (instant), then Supabase for existing users not in local store.
  */
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -217,36 +238,40 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Try Supabase
-    const supaResult = await trySupabaseLogin(email, password);
-    if (supaResult) {
-      res.status(200).json({ success: true, token: supaResult.token, user: safeUser(supaResult.user), message: 'Login successful.' });
-      return;
-    }
-
-    // Fallback: local store
+    // ── 1. Check local store first (instant — no network needed) ──────────
     let found: LocalUser | undefined;
     for (const u of localUsers.values()) {
       if (u.email.toLowerCase() === email.toLowerCase()) { found = u; break; }
     }
-    if (!found) {
-      res.status(401).json({ success: false, message: 'Invalid email or password.' });
-      return;
-    }
-    const valid = await bcrypt.compare(password, found.password_hash);
-    if (!valid) {
-      res.status(401).json({ success: false, message: 'Invalid email or password.' });
+    if (found) {
+      const valid = await bcrypt.compare(password, found.password_hash);
+      if (!valid) {
+        res.status(401).json({ success: false, message: 'Invalid email or password.' });
+        return;
+      }
+      const token = signToken(found.id, found.role);
+      console.log(`[Auth] Local login: ${email} (${found.role})`);
+      res.status(200).json({ success: true, token, user: safeUser(found), message: 'Login successful.' });
       return;
     }
 
-    const token = signToken(found.id, found.role);
-    console.log(`[Auth] Local login: ${email} (${found.role})`);
-    res.status(200).json({ success: true, token, user: safeUser(found), message: 'Login successful.' });
+    // ── 2. Not in local store → try Supabase (for pre-existing users) ──────
+    const supaResult = await trySupabaseLogin(email, password);
+    if (supaResult) {
+      // Cache in local store so next login is instant
+      localUsers.set(supaResult.user.id, { ...supaResult.user, password_hash: '' });
+      res.status(200).json({ success: true, token: supaResult.token, user: safeUser(supaResult.user), message: 'Login successful.' });
+      return;
+    }
+
+    // ── 3. Not found anywhere ───────────────────────────────────────────────
+    res.status(401).json({ success: false, message: 'Invalid email or password. If you registered before, please try resetting your password.' });
   } catch (err: any) {
     console.error('[Auth] login error:', err.message);
     res.status(500).json({ success: false, message: err.message || 'Login failed.' });
   }
 };
+
 
 /**
  * GET /api/auth/me
