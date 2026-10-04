@@ -17,6 +17,8 @@ import { ProtectedRoute, RoleProtectedRoute } from './components/common/Protecte
 import { LandingPage } from './pages/LandingPage.js';
 import { LoginPage } from './pages/LoginPage.js';
 import { RegisterPage } from './pages/RegisterPage.js';
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage.js';
+import { ResetPasswordPage } from './pages/ResetPasswordPage.js';
 import { QrRegisterPage } from './pages/QrRegisterPage.js';
 import { TokenPassPage } from './pages/patient/TokenPassPage.js';
 import { NotFoundPage } from './pages/NotFoundPage.js';
@@ -72,6 +74,8 @@ export const App: React.FC = () => {
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
+                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
                 <Route path="/qr-register" element={<QrRegisterPage />} />
                 <Route path="/token-pass/:id" element={<TokenPassPage />} />
                 <Route path="/cancel-token/:id" element={<TokenPassPage />} />
