@@ -9,8 +9,9 @@ export const config = {
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
   GROQ_API_KEY: process.env.GROQ_API_KEY || '',
   NODE_ENV: process.env.NODE_ENV || 'development',
-  JWT_SECRET: process.env.JWT_SECRET || 'smartqueue-jwt-secret-2026-fallback',
-  // Admin registration secret key — NEVER expose this to the frontend
-  ADMIN_REGISTRATION_KEY: process.env.ADMIN_REGISTRATION_KEY || '',
+  JWT_SECRET: process.env.JWT_SECRET || 'sq-jwt-$3cr3t-2026-!xP@9mNvLqZ',
+  // Admin registration secret — read from env var; fallback used when env var is not set (e.g. Render cold deploy)
+  ADMIN_REGISTRATION_KEY: process.env.ADMIN_REGISTRATION_KEY || 'SQ-Admin#Secure!2026@Hospital',
 };
+
 
