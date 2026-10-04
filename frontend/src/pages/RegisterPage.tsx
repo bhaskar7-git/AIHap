@@ -83,7 +83,7 @@ export const RegisterPage: React.FC = () => {
 
   // Password visibility toggles
   const [showPassword, setShowPassword] = useState(false);
-  const [showAdminPasscode, setShowAdminPasscode] = useState(false);
+  const [showAdminPasscode, setShowAdminPasscode] = useState(true); // admin passcode visible by default
 
   // State
   const [loading, setLoading] = useState(false);
@@ -519,13 +519,12 @@ export const RegisterPage: React.FC = () => {
                       onChange={(e) => setAdminPasscode(e.target.value)}
                       placeholder="Enter Admin authorization passcode (e.g. Admin@123)"
                       className="w-full pl-10 pr-11 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-colors"
-                      required
                     />
                     <button
                       type="button"
                       tabIndex={-1}
                       onClick={() => setShowAdminPasscode((v) => !v)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                      className="absolute right-3 top-3.5 text-slate-400 hover:text-slate-600 transition-colors"
                       aria-label={showAdminPasscode ? 'Hide passcode' : 'Show passcode'}
                     >
                       {showAdminPasscode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
