@@ -168,12 +168,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           return newUser;
         }
       } catch (backendErr: any) {
-        // Propagate real errors (e.g., duplicate email)
+        // Propagate real errors — never fall through to Supabase for these
         if (backendErr?.response?.status === 409) {
           throw new Error(backendErr.response.data?.message || 'An account with this email already exists.');
         }
         if (backendErr?.response?.status === 400) {
           throw new Error(backendErr.response.data?.message || 'Invalid registration data.');
+        }
+        if (backendErr?.response?.status === 403) {
+          // Invalid admin passcode — must NOT fall through to Supabase (would bypass security)
+          throw new Error(backendErr.response.data?.message || 'Invalid authorization key.');
+        }
+        if (backendErr?.response?.status === 503) {
+          throw new Error(backendErr.response.data?.message || 'Admin registration is currently unavailable.');
         }
         console.warn('[Auth] Backend register failed, trying Supabase directly:', backendErr?.message);
       }

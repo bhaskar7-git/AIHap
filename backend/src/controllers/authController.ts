@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { config } from '../config/index.js';
 import { AuthRequest } from '../middleware/auth.js';
+import { UserRole } from '../types/index.js';
 
 // ─── In-memory user store (fallback when Supabase is paused) ─────────────────
 // On Render, this persists as long as the server is running.
@@ -205,12 +206,35 @@ async function trySupabaseLogin(email: string, password: string): Promise<{ toke
  */
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { name, email, phone, password, role = 'PATIENT', ...extra } = req.body;
+    const { name, email, phone, password, role = 'PATIENT', adminPasscode, ...extra } = req.body;
 
     if (!name || !email || !password) {
       res.status(400).json({ success: false, message: 'Name, email and password are required.' });
       return;
     }
+
+    // ── ADMIN SECURITY GATE ──────────────────────────────────────────────────
+    // Only the backend knows the ADMIN_REGISTRATION_KEY (from env). It is NEVER
+    // exposed to the frontend or hardcoded in source. Any attempt to register as
+    // ADMIN with a missing or wrong key is rejected with 403.
+    if (role === 'ADMIN') {
+      const secretKey = config.ADMIN_REGISTRATION_KEY;
+      if (!secretKey) {
+        console.error('[Auth] ADMIN_REGISTRATION_KEY is not configured on the server.');
+        res.status(503).json({ success: false, message: 'Admin registration is currently unavailable. Contact system administrator.' });
+        return;
+      }
+      if (!adminPasscode || adminPasscode.trim() !== secretKey.trim()) {
+        console.warn(`[Auth] Failed admin registration attempt for email: ${email}`);
+        res.status(403).json({ success: false, message: 'Invalid admin authorization key. Contact your system administrator.' });
+        return;
+      }
+    }
+
+    // ── Block doctor/patient from claiming admin role via API ────────────────
+    const safeRole: UserRole = (['PATIENT', 'DOCTOR', 'ADMIN'] as UserRole[]).includes(role as UserRole)
+      ? (role as UserRole)
+      : 'PATIENT';
 
     // Check duplicate email (local store)
     for (const u of localUsers.values()) {
@@ -222,7 +246,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
     // Try Supabase
     try {
-      const supaResult = await trySupabaseRegister({ name, email, phone, password, role, ...extra });
+      const supaResult = await trySupabaseRegister({ name, email, phone, password, role: safeRole, ...extra });
       if (supaResult) {
         res.status(201).json({ success: true, token: supaResult.token, user: safeUser(supaResult.user), message: 'Account created successfully.' });
         return;
@@ -241,15 +265,15 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     const cleanPhone = phone ? String(phone).replace(/\D/g, '').slice(-10) : '';
     const newUser: LocalUser = {
       id, name: name.trim(), email: email.toLowerCase().trim(), phone: cleanPhone,
-      role, password_hash, created_at: new Date().toISOString(),
+      role: safeRole, password_hash, created_at: new Date().toISOString(),
       specialization: extra.specialization, qualification: extra.qualification,
       hospital_name: extra.hospital_name, department_name: extra.department_name,
       average_consultation_time: extra.average_consultation_time,
     };
     localUsers.set(id, newUser);
 
-    const token = signToken(id, role);
-    console.log(`[Auth] Local register: ${email} (${role})`);
+    const token = signToken(id, safeRole);
+    console.log(`[Auth] Local register: ${email} (${safeRole})`);
     res.status(201).json({ success: true, token, user: safeUser(newUser), message: 'Account created successfully (offline mode).' });
   } catch (err: any) {
     console.error('[Auth] register error:', err.message);

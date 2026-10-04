@@ -10,5 +10,7 @@ export const config = {
   GROQ_API_KEY: process.env.GROQ_API_KEY || '',
   NODE_ENV: process.env.NODE_ENV || 'development',
   JWT_SECRET: process.env.JWT_SECRET || 'smartqueue-jwt-secret-2026-fallback',
+  // Admin registration secret key — NEVER expose this to the frontend
+  ADMIN_REGISTRATION_KEY: process.env.ADMIN_REGISTRATION_KEY || '',
 };
 

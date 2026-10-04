@@ -140,10 +140,6 @@ export const RegisterPage: React.FC = () => {
       }
     }
 
-    if (role === 'ADMIN' && adminPasscode !== 'ADMIN2026' && adminPasscode !== 'Admin@123') {
-      setError('Invalid Admin authorization passcode. Use "Admin@123" for demo setup.');
-      return;
-    }
 
     try {
       setLoading(true);
@@ -158,6 +154,9 @@ export const RegisterPage: React.FC = () => {
         hospital_name: finalHospital,
         department_name: finalDepartment,
         average_consultation_time: avgConsultationTime,
+      } : role === 'ADMIN' ? {
+        // adminPasscode sent to backend for server-side validation — never validated client-side
+        adminPasscode: adminPasscode.trim(),
       } : {};
 
       await register(name.trim(), email.trim(), phone.trim(), password, role, extraData);
@@ -524,7 +523,7 @@ export const RegisterPage: React.FC = () => {
                       type={showAdminPasscode ? 'text' : 'password'}
                       value={adminPasscode}
                       onChange={(e) => setAdminPasscode(e.target.value)}
-                      placeholder="Enter Admin authorization passcode (e.g. Admin@123)"
+                      placeholder="Enter authorization code"
                       className="w-full pl-10 pr-11 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-colors"
                     />
                     <button
@@ -537,7 +536,7 @@ export const RegisterPage: React.FC = () => {
                       {showAdminPasscode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
-                  <p className="text-[11px] text-slate-400 mt-1">For demo purposes, use passcode: <strong className="text-slate-600">Admin@123</strong></p>
+                  <p className="text-[11px] text-slate-400 mt-1">Contact your system administrator to obtain the authorization code.</p>
                 </div>
               </div>
             )}
