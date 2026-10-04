@@ -9,7 +9,6 @@ export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Read optional ?redirect= param to return user to their intended page
   const redirectTo = new URLSearchParams(location.search).get('redirect') || null;
 
   const [email, setEmail] = useState('');
@@ -32,7 +31,6 @@ export const LoginPage: React.FC = () => {
       setError('Please enter both email and password.');
       return;
     }
-
     try {
       setLoading(true);
       setError(null);
@@ -66,7 +64,12 @@ export const LoginPage: React.FC = () => {
             </div>
           )}
 
-          <form onSubmit={handleStandardLogin} className="space-y-4">
+          {/* autoComplete="off" on form prevents browser from pre-filling saved credentials */}
+          <form onSubmit={handleStandardLogin} className="space-y-4" autoComplete="off">
+            {/* Hidden dummy inputs trick browsers that ignore autoComplete="off" */}
+            <input type="text" name="fake_user" style={{ display: 'none' }} readOnly />
+            <input type="password" name="fake_pass" style={{ display: 'none' }} readOnly />
+
             {/* Email */}
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
@@ -79,13 +82,14 @@ export const LoginPage: React.FC = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@example.com"
+                  autoComplete="off"
                   className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-colors"
                   required
                 />
               </div>
             </div>
 
-            {/* Password with show/hide toggle */}
+            {/* Password */}
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                 Password
@@ -96,7 +100,8 @@ export const LoginPage: React.FC = () => {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
+                  placeholder="Enter your password"
+                  autoComplete="new-password"
                   className="w-full pl-10 pr-11 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-colors"
                   required
                 />
@@ -104,7 +109,7 @@ export const LoginPage: React.FC = () => {
                   type="button"
                   tabIndex={-1}
                   onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  className="absolute right-3 top-3.5 text-slate-400 hover:text-slate-600 transition-colors"
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}

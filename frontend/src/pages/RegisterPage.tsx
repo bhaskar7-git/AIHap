@@ -240,7 +240,10 @@ export const RegisterPage: React.FC = () => {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
+            {/* Hidden dummy fields — stops browsers that ignore autoComplete="off" from pre-filling */}
+            <input type="text" name="fake_user_reg" style={{ display: 'none' }} readOnly />
+            <input type="password" name="fake_pass_reg" style={{ display: 'none' }} readOnly />
             {/* Common Fields */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
@@ -252,6 +255,7 @@ export const RegisterPage: React.FC = () => {
                   <input
                     type="text"
                     value={name}
+                    autoComplete="off"
                     onChange={(e) => setName(e.target.value)}
                     placeholder={role === 'DOCTOR' ? 'e.g. Dr. Ravi Kumar' : 'e.g. Ananya Sharma'}
                     className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-colors"
@@ -276,6 +280,7 @@ export const RegisterPage: React.FC = () => {
                     inputMode="numeric"
                     maxLength={10}
                     value={phone}
+                    autoComplete="off"
                     onChange={handlePhoneChange}
                     placeholder="9876543210 (10 digits)"
                     className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-colors"
@@ -297,6 +302,7 @@ export const RegisterPage: React.FC = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder={role === 'DOCTOR' ? 'dr.ravi@hospital.com' : 'user@example.com'}
+                    autoComplete="off"
                     className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-colors"
                     required
                   />
@@ -314,6 +320,7 @@ export const RegisterPage: React.FC = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="At least 6 characters"
+                    autoComplete="new-password"
                     className="w-full pl-10 pr-11 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-colors"
                     required
                   />
