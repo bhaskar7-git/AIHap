@@ -65,13 +65,34 @@ async function trySupabaseRegister(body: any): Promise<{ token: string; user: Lo
   try {
     // Dynamically import supabase so if the module itself throws, we catch it
     const { supabase } = await import('../lib/supabase.js');
+
+    // Check if email already exists in Supabase before creating
+    const { data: existing } = await supabase.auth.admin.listUsers();
+    const alreadyExists = existing?.users?.some(
+      (u: any) => u.email?.toLowerCase() === body.email?.toLowerCase()
+    );
+    if (alreadyExists) {
+      // Throw so the register handler catches and returns 409
+      throw Object.assign(new Error('An account with this email already exists.'), { isDuplicate: true });
+    }
+
     const { data, error } = await supabase.auth.admin.createUser({
       email: body.email,
       password: body.password,
       email_confirm: true,
       user_metadata: { name: body.name, phone: body.phone, role: body.role || 'PATIENT' },
     });
-    if (error || !data?.user) return null;
+
+    // Duplicate or other Supabase error
+    if (error) {
+      const msg = error.message || '';
+      if (msg.toLowerCase().includes('already') || msg.toLowerCase().includes('registered') || (error as any).status === 422) {
+        throw Object.assign(new Error('An account with this email already exists.'), { isDuplicate: true });
+      }
+      console.warn('[Auth] Supabase createUser error:', msg);
+      return null;
+    }
+    if (!data?.user) return null;
 
     // Upsert profile
     await supabase.from('profiles').upsert({
@@ -98,8 +119,10 @@ async function trySupabaseRegister(body: any): Promise<{ token: string; user: Lo
       created_at: data.user.created_at || new Date().toISOString(),
     };
     return { token, user };
-  } catch (err) {
-    console.warn('[Auth] Supabase register failed, using local store:', (err as any)?.message);
+  } catch (err: any) {
+    // Re-throw duplicate errors so the register handler sends 409
+    if (err?.isDuplicate) throw err;
+    console.warn('[Auth] Supabase register failed, using local store:', err?.message);
     return null;
   }
 }
@@ -198,10 +221,18 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     }
 
     // Try Supabase
-    const supaResult = await trySupabaseRegister({ name, email, phone, password, role, ...extra });
-    if (supaResult) {
-      res.status(201).json({ success: true, token: supaResult.token, user: safeUser(supaResult.user), message: 'Account created successfully.' });
-      return;
+    try {
+      const supaResult = await trySupabaseRegister({ name, email, phone, password, role, ...extra });
+      if (supaResult) {
+        res.status(201).json({ success: true, token: supaResult.token, user: safeUser(supaResult.user), message: 'Account created successfully.' });
+        return;
+      }
+    } catch (supaErr: any) {
+      if (supaErr?.isDuplicate) {
+        res.status(409).json({ success: false, message: supaErr.message });
+        return;
+      }
+      // Other Supabase errors — fall through to local store
     }
 
     // Fallback: local in-memory store

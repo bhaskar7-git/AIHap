@@ -21,13 +21,22 @@ export const api = axios.create({
   },
 });
 
-// Request interceptor — attach Supabase access token
+// Request interceptor — attach backend JWT first, fall back to Supabase session
 api.interceptors.request.use(
   async (config) => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.access_token && config.headers) {
-      config.headers.Authorization = `Bearer ${session.access_token}`;
+    // Prefer the backend-issued JWT stored at login/register
+    const backendToken = localStorage.getItem('sq_token');
+    if (backendToken && config.headers) {
+      config.headers.Authorization = `Bearer ${backendToken}`;
+      return config;
     }
+    // Fallback: use Supabase session token (for Supabase-direct auth flows)
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token && config.headers) {
+        config.headers.Authorization = `Bearer ${session.access_token}`;
+      }
+    } catch { /* Supabase offline */ }
     return config;
   },
   (error) => Promise.reject(error)

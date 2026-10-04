@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Stethoscope, Plus, MapPin, Clock, Search } from 'lucide-react';
+import { Stethoscope, Plus, MapPin, Clock, Search, Eye, EyeOff } from 'lucide-react';
 import { doctorApi, hospitalApi, departmentApi } from '../../services/api.js';
 import { Doctor, Hospital, Department } from '../../types/index.js';
 import { Modal } from '../../components/common/Modal.js';
@@ -23,6 +23,7 @@ export const AdminDoctorsPage: React.FC = () => {
   const [qualification, setQualification] = useState('');
   const [avgTime, setAvgTime] = useState<number>(8);
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -177,13 +178,24 @@ export const AdminDoctorsPage: React.FC = () => {
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Temporary Password</label>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full p-3 pr-11 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white"
+                />
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
           </div>
 
