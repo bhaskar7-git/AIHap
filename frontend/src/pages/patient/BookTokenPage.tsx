@@ -194,17 +194,15 @@ export const BookTokenPage: React.FC = () => {
       <div className="flex items-center gap-2 overflow-x-auto pb-1">
         <button
           onClick={() => setSelectedDept('ALL')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-            selectedDept === 'ALL' ? 'bg-brand-600 text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-          }`}
+          className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${selectedDept === 'ALL' ? 'bg-brand-600 text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+            }`}
         >
           All ({doctors.length})
         </button>
         {departments.map((d) => (
           <button key={d.id} onClick={() => setSelectedDept(d.id)}
-            className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-              selectedDept === d.id ? 'bg-brand-600 text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-            }`}
+            className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${selectedDept === d.id ? 'bg-brand-600 text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+              }`}
           >
             {d.name}
           </button>
@@ -356,11 +354,10 @@ export const BookTokenPage: React.FC = () => {
                           key={slot}
                           type="button"
                           onClick={() => setBookingTime(slot)}
-                          className={`py-2 px-1 rounded-xl text-xs font-bold transition-all border ${
-                            bookingTime === slot
-                              ? 'bg-brand-600 text-white border-brand-600 shadow-md scale-105'
-                              : 'bg-white text-slate-700 border-slate-200 hover:border-brand-300 hover:bg-brand-50'
-                          }`}
+                          className={`py-2 px-1 rounded-xl text-xs font-bold transition-all border ${bookingTime === slot
+                            ? 'bg-brand-600 text-white border-brand-600 shadow-md scale-105'
+                            : 'bg-white text-slate-700 border-slate-200 hover:border-brand-300 hover:bg-brand-50'
+                            }`}
                         >
                           {slot}
                         </button>
@@ -376,11 +373,10 @@ export const BookTokenPage: React.FC = () => {
                         type="button"
                         onClick={() => { setIsEmergency(false); }}
                         disabled={booking}
-                        className={`py-2.5 px-2 rounded-xl text-xs font-extrabold transition-all border flex items-center justify-center gap-1 active:scale-95 disabled:opacity-60 ${
-                          !isEmergency
-                            ? 'bg-brand-600 hover:bg-brand-700 text-white border-brand-600 shadow-md'
-                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                        }`}
+                        className={`py-2.5 px-2 rounded-xl text-xs font-extrabold transition-all border flex items-center justify-center gap-1 active:scale-95 disabled:opacity-60 ${!isEmergency
+                          ? 'bg-brand-600 hover:bg-brand-700 text-white border-brand-600 shadow-md'
+                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                          }`}
                       >
                         <Ticket className="w-3.5 h-3.5" /> Standard
                       </button>
@@ -388,11 +384,10 @@ export const BookTokenPage: React.FC = () => {
                         type="button"
                         onClick={() => { setIsEmergency(true); }}
                         disabled={booking}
-                        className={`py-2.5 px-2 rounded-xl text-xs font-extrabold transition-all border flex items-center justify-center gap-1 active:scale-95 disabled:opacity-60 ${
-                          isEmergency
-                            ? 'bg-rose-600 hover:bg-rose-700 text-white border-rose-600 shadow-md ring-2 ring-rose-400'
-                            : 'bg-white text-rose-700 border-rose-200 hover:bg-rose-50'
-                        }`}
+                        className={`py-2.5 px-2 rounded-xl text-xs font-extrabold transition-all border flex items-center justify-center gap-1 active:scale-95 disabled:opacity-60 ${isEmergency
+                          ? 'bg-rose-600 hover:bg-rose-700 text-white border-rose-600 shadow-md ring-2 ring-rose-400'
+                          : 'bg-white text-rose-700 border-rose-200 hover:bg-rose-50'
+                          }`}
                       >
                         <Zap className="w-3.5 h-3.5" /> 🚨 Emergency
                       </button>
@@ -428,11 +423,10 @@ export const BookTokenPage: React.FC = () => {
                     type="button"
                     onClick={() => handleConfirmBooking()}
                     disabled={booking}
-                    className={`w-full py-3 disabled:opacity-60 text-white font-extrabold rounded-2xl shadow-lg transition-all text-sm flex items-center justify-center gap-2 ${
-                      isEmergency
-                        ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-500/30 ring-2 ring-rose-400'
-                        : 'bg-brand-600 hover:bg-brand-700 shadow-brand-500/20'
-                    }`}
+                    className={`w-full py-3 disabled:opacity-60 text-white font-extrabold rounded-2xl shadow-lg transition-all text-sm flex items-center justify-center gap-2 ${isEmergency
+                      ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-500/30 ring-2 ring-rose-400'
+                      : 'bg-brand-600 hover:bg-brand-700 shadow-brand-500/20'
+                      }`}
                   >
                     {booking ? (
                       <>
@@ -455,9 +449,8 @@ export const BookTokenPage: React.FC = () => {
               /* ── STEP 2: Token Confirmed ── */
               <div className="p-6 space-y-5 text-center">
                 {/* Success Icon */}
-                <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto shadow-md ${
-                  confirmedToken.token?.priority === 'EMERGENCY' ? 'bg-rose-100 animate-bounce' : 'bg-emerald-100'
-                }`}>
+                <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto shadow-md ${confirmedToken.token?.priority === 'EMERGENCY' ? 'bg-rose-100 animate-bounce' : 'bg-emerald-100'
+                  }`}>
                   {confirmedToken.token?.priority === 'EMERGENCY' ? (
                     <Zap className="w-9 h-9 text-rose-600" />
                   ) : (
@@ -477,11 +470,10 @@ export const BookTokenPage: React.FC = () => {
                 </div>
 
                 {/* Big Token Number */}
-                <div className={`rounded-3xl p-6 text-white shadow-xl ${
-                  confirmedToken.token?.priority === 'EMERGENCY'
-                    ? 'bg-gradient-to-br from-rose-600 via-rose-700 to-red-800 ring-4 ring-rose-400 animate-pulse'
-                    : 'bg-gradient-to-br from-brand-600 to-cyan-600'
-                }`}>
+                <div className={`rounded-3xl p-6 text-white shadow-xl ${confirmedToken.token?.priority === 'EMERGENCY'
+                  ? 'bg-gradient-to-br from-rose-600 via-rose-700 to-red-800 ring-4 ring-rose-400 animate-pulse'
+                  : 'bg-gradient-to-br from-brand-600 to-cyan-600'
+                  }`}>
                   <p className="text-white/80 text-xs uppercase tracking-widest font-bold mb-1">
                     {confirmedToken.token?.priority === 'EMERGENCY' ? '🚨 Emergency Token (Room 204)' : 'Your Token Number'}
                   </p>
