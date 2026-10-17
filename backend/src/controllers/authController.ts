@@ -34,8 +34,14 @@ const DEMO_SEEDS = [
   { id: 'demo-admin-01',   name: 'Demo Admin',    email: 'admin@smartqueue.com',   phone: '9000000003', role: 'ADMIN',   password: 'Admin@123' },
 ];
 
+// ─── Permanent real user seeds (survives Supabase pause / backend restart) ────
+// Add real accounts here to ensure they always work regardless of Supabase status.
+const EXTRA_SEEDS = [
+  { id: 'real-user-bhaskar', name: 'Bhaskar',  email: 'bhaskar7@gmail.com', phone: '', role: 'DOCTOR', password: '@doctor#07', specialization: 'General Physician', qualification: 'MBBS' },
+];
+
 (async () => {
-  for (const seed of DEMO_SEEDS) {
+  for (const seed of [...DEMO_SEEDS, ...EXTRA_SEEDS]) {
     const password_hash = await bcrypt.hash(seed.password, 10);
     localUsers.set(seed.id, {
       id: seed.id, name: seed.name, email: seed.email, phone: seed.phone,
@@ -45,6 +51,7 @@ const DEMO_SEEDS = [
     });
   }
   console.log('✅ Demo users seeded into local auth store (patient/doctor/admin).');
+  console.log('✅ Extra real users seeded (bhaskar7@gmail.com).');
 })();
 
 
