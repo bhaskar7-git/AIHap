@@ -174,7 +174,7 @@ async function upsertDoctorSupabase(supabase: any, userId: string, body: any) {
   }
 }
 
-async function trySupabaseLogin(email: string, password: string): Promise<{ token: string; user: LocalUser } | null> {
+async function trySupabaseLogin(email: string, password: string): Promise<{ token: string; user: LocalUser; passwordHash: string } | null> {
   try {
     const { supabase } = await import('../lib/supabase.js');
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -182,16 +182,18 @@ async function trySupabaseLogin(email: string, password: string): Promise<{ toke
 
     const { data: profile } = await supabase.from('profiles').select('*').eq('id', data.user.id).maybeSingle();
     const token = signToken(data.user.id, profile?.role || 'PATIENT');
+    // Hash the password now so we can cache it for offline logins later
+    const passwordHash = await bcrypt.hash(password, 10);
     const user: LocalUser = {
       id: data.user.id,
       name: profile?.name || data.user.user_metadata?.name || email.split('@')[0],
       email: data.user.email || email,
       phone: profile?.phone || '',
       role: profile?.role || 'PATIENT',
-      password_hash: '',
+      password_hash: passwordHash,
       created_at: profile?.created_at || new Date().toISOString(),
     };
-    return { token, user };
+    return { token, user, passwordHash };
   } catch (err) {
     console.warn('[Auth] Supabase login failed, using local store:', (err as any)?.message);
     return null;
@@ -299,6 +301,19 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       if (u.email.toLowerCase() === email.toLowerCase()) { found = u; break; }
     }
     if (found) {
+      // If password_hash is empty (legacy cached Supabase user), re-verify via Supabase
+      if (!found.password_hash) {
+        console.log(`[Auth] Cached user ${email} has no local hash — re-verifying via Supabase`);
+        const supaResult = await trySupabaseLogin(email, password);
+        if (supaResult) {
+          // Update the cached record with the real hash so future offline logins work
+          localUsers.set(supaResult.user.id, supaResult.user);
+          res.status(200).json({ success: true, token: supaResult.token, user: safeUser(supaResult.user), message: 'Login successful.' });
+          return;
+        }
+        res.status(401).json({ success: false, message: 'Invalid email or password.' });
+        return;
+      }
       const valid = await bcrypt.compare(password, found.password_hash);
       if (!valid) {
         res.status(401).json({ success: false, message: 'Invalid email or password.' });
@@ -313,14 +328,14 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     // ── 2. Not in local store → try Supabase (for pre-existing users) ──────
     const supaResult = await trySupabaseLogin(email, password);
     if (supaResult) {
-      // Cache in local store so next login is instant
-      localUsers.set(supaResult.user.id, { ...supaResult.user, password_hash: '' });
+      // Cache in local store WITH hashed password so future offline logins work
+      localUsers.set(supaResult.user.id, supaResult.user);
       res.status(200).json({ success: true, token: supaResult.token, user: safeUser(supaResult.user), message: 'Login successful.' });
       return;
     }
 
     // ── 3. Not found anywhere ───────────────────────────────────────────────
-    res.status(401).json({ success: false, message: 'Invalid email or password. If you registered before, please try resetting your password.' });
+    res.status(401).json({ success: false, message: 'Invalid email or password.' });
   } catch (err: any) {
     console.error('[Auth] login error:', err.message);
     res.status(500).json({ success: false, message: err.message || 'Login failed.' });
