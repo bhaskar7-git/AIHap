@@ -1,11 +1,41 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Activity, Lock, Mail, ArrowRight, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import {
+  Activity, Lock, Mail, ArrowRight, AlertCircle, Eye, EyeOff,
+  ShieldCheck, Stethoscope, User, Zap
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext.js';
 import { UserRole } from '../types/index.js';
 
+const DEMO_ACCOUNTS: { role: UserRole; label: string; email: string; pass: string; color: string; icon: React.ReactNode }[] = [
+  {
+    role: 'PATIENT',
+    label: 'Patient',
+    email: 'patient@smartqueue.com',
+    pass: 'Patient@123',
+    color: 'from-sky-500 to-cyan-400',
+    icon: <User className="w-3.5 h-3.5" />,
+  },
+  {
+    role: 'DOCTOR',
+    label: 'Doctor',
+    email: 'doctor@smartqueue.com',
+    pass: 'Doctor@123',
+    color: 'from-emerald-500 to-teal-400',
+    icon: <Stethoscope className="w-3.5 h-3.5" />,
+  },
+  {
+    role: 'ADMIN',
+    label: 'Admin',
+    email: 'admin@smartqueue.com',
+    pass: 'Admin@123',
+    color: 'from-violet-600 to-purple-500',
+    icon: <ShieldCheck className="w-3.5 h-3.5" />,
+  },
+];
+
 export const LoginPage: React.FC = () => {
-  const { login } = useAuth();
+  const { login, demoLogin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -15,6 +45,7 @@ export const LoginPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [demoLoading, setDemoLoading] = useState<UserRole | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const redirectByRole = (role: UserRole) => {
@@ -43,6 +74,19 @@ export const LoginPage: React.FC = () => {
     }
   };
 
+  const handleDemoLogin = async (role: UserRole) => {
+    try {
+      setDemoLoading(role);
+      setError(null);
+      const loggedInUser = await demoLogin(role);
+      redirectByRole(loggedInUser.role);
+    } catch (err: any) {
+      setError(err?.message || 'Demo login failed. Please try manual login.');
+    } finally {
+      setDemoLoading(null);
+    }
+  };
+
   return (
     <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center px-4 py-12">
       <div className="max-w-md w-full space-y-6">
@@ -53,6 +97,41 @@ export const LoginPage: React.FC = () => {
           </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900">Sign in to SmartQueue</h2>
           <p className="text-xs sm:text-sm text-slate-500">Access your appointments, live token queue or medical dashboard</p>
+        </div>
+
+        {/* 1-Click Demo Login */}
+        <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-5 rounded-3xl border border-slate-700 shadow-lg space-y-3">
+          <div className="flex items-center gap-2">
+            <Zap className="w-4 h-4 text-yellow-400" />
+            <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">1-Click Demo Login</span>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {DEMO_ACCOUNTS.map((acc) => (
+              <button
+                key={acc.role}
+                onClick={() => handleDemoLogin(acc.role)}
+                disabled={!!demoLoading || loading}
+                className={`relative flex flex-col items-center gap-1.5 py-3 px-2 rounded-2xl bg-gradient-to-br ${acc.color} text-white font-bold text-xs shadow-md hover:opacity-90 active:scale-95 transition-all disabled:opacity-50`}
+              >
+                {demoLoading === acc.role ? (
+                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  acc.icon
+                )}
+                <span>{acc.label}</span>
+              </button>
+            ))}
+          </div>
+          <p className="text-[10px] text-slate-400 text-center">
+            Tap any role to instantly log in with pre-seeded demo credentials
+          </p>
+        </div>
+
+        {/* Divider */}
+        <div className="flex items-center gap-3">
+          <div className="flex-1 h-px bg-slate-200" />
+          <span className="text-xs text-slate-400 font-medium">or sign in manually</span>
+          <div className="flex-1 h-px bg-slate-200" />
         </div>
 
         {/* Login Form */}
@@ -129,7 +208,7 @@ export const LoginPage: React.FC = () => {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !!demoLoading}
               className="w-full py-3.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50"
             >
               {loading ? 'Authenticating...' : 'Sign In'}
@@ -142,6 +221,20 @@ export const LoginPage: React.FC = () => {
             <Link to="/register" className="font-bold text-brand-600 hover:text-brand-700">
               Register here
             </Link>
+          </div>
+        </div>
+
+        {/* Demo credentials hint */}
+        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2">
+          <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">Demo Credentials</p>
+          <div className="space-y-1.5">
+            {DEMO_ACCOUNTS.map((acc) => (
+              <div key={acc.role} className="flex items-center justify-between text-xs">
+                <span className="text-slate-500 font-medium">{acc.label}</span>
+                <code className="text-slate-700 bg-slate-100 px-2 py-0.5 rounded-lg font-mono">{acc.email}</code>
+              </div>
+            ))}
+            <p className="text-[10px] text-slate-400 pt-1">All demo accounts use role-specific passwords (e.g. <code className="bg-slate-100 px-1 rounded">Admin@123</code>)</p>
           </div>
         </div>
       </div>
