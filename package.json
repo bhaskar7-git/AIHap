@@ -8,7 +8,8 @@
     "dev:frontend": "npm --prefix frontend run dev",
     "build": "npm --prefix backend run build && npm --prefix frontend run build",
     "seed": "npm --prefix backend run seed",
-    "test": "npm --prefix backend run test:e2e"
+    "test": "npm --prefix backend run test:e2e",
+    "deploy": "git add -A && git commit -m \"chore: deploy update\" && git push origin main"
   },
   "keywords": ["hospital", "queue", "tokens", "appointment", "hackathon", "smartqueue"],
   "author": "SmartQueue Team",
